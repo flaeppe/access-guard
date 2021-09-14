@@ -1,0 +1,87 @@
+default_language_version:
+    python: python3.9
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: debug-statements
+      - id: detect-private-key
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.26.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - --py39-plus
+          - --keep-runtime-typing
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --ignore-init-module-imports
+  - repo: https://github.com/pycqa/isort
+    rev: 5.9.3
+    hooks:
+      - id: isort
+  - repo: https://github.com/psf/black
+    rev: 21.9b0
+    hooks:
+      - id: black
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-tidy-imports
+          - flake8-print
+  - repo: https://github.com/sirosen/check-jsonschema
+    rev: 0.4.1
+    hooks:
+      - id: check-github-workflows
+        require_serial: true
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.0
+    hooks:
+      - id: bandit
+        exclude: '/tests/'
+        args:
+          - --recursive
+          - --skip=B101,B608
+  - repo: local
+    hooks:
+      - id: hadolint
+        name: hadolint
+        language: docker_image
+        entry: >-
+          hadolint/hadolint:v2.7.0
+          hadolint
+            --ignore DL3042
+        types: [dockerfile]
+
+exclude: |
+  (?x)(
+    /(
+      \.eggs
+      | \.git
+      | \.hg
+      | \.mypy_cache
+      | \.pytest_cache
+      | \.nox
+      | \.tox
+      | \.venv
+      | _build
+      | buck-out
+      | build
+      | dist
+    )/
+  )

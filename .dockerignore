@@ -1,0 +1,11 @@
+# Ignore everything per default
+*
+
+# Include necessary stuff
+!access_guard
+!reqs
+
+!setup.cfg
+
+# Ignore files nested within included directories
+**/*.pyc

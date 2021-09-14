@@ -1,0 +1,27 @@
+[tool.black]
+line-length = 88
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.nox
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+)
+'''
+
+[tool.isort]
+line_length = 88
+known_first_party = "access_guard/"
+multi_line_output = 3
+combine_as_imports = true
+include_trailing_comma = true
+force_grid_wrap = 0

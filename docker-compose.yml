@@ -1,0 +1,71 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: traefik:v2.5
+    command: |
+      --providers.docker
+      --providers.docker.exposedByDefault=false
+      --log.level=INFO
+      --accesslog=true
+      --entryPoints.web.address=:80
+      --api.insecure=true
+      --api.dashboard=true
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.api.rule: "Host(`traefik.localhost.com`)"
+      traefik.http.routers.api.service: "api@internal"
+
+  whoami:
+    image: containous/whoami
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.whoami.rule: "Host(`whoami.localhost.com`)"
+      traefik.http.routers.whoami.middlewares: "access-guard@docker"
+
+  access-guard:
+    image: access-guard
+    build:
+      context: .
+      args:
+        BUILD_TARGET: dev
+    command: [
+      ".*@test\\.com$$",
+      "--secret", "supersecret",
+      "--auth-host", "access-guard.localhost.com",
+      "--cookie-domain", "localhost.com",
+      "--email-host", "mailhog",
+      "--email-port", "1025",
+      "--from-email", "access-guard@local.com"
+      ]
+    stdin_open: true
+    tty: true
+    depends_on:
+      - mailhog
+    ports:
+      - "8585:8585"
+    volumes:
+      - ./access_guard:/app/access_guard:cached
+      - ./setup.cfg:/app/setup.cfg
+      - mypy_cache:/app/.mypy_cache
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.access-guard.rule: "Host(`access-guard.localhost.com`)"
+      traefik.http.routers.access-guard.service: "access-guard"
+      traefik.http.middlewares.access-guard.chain.middlewares: "access-guard-auth,access-guard-service"
+      traefik.http.middlewares.access-guard-auth.headers.customrequestheaders.Authorization: "Token secret-token"
+      traefik.http.middlewares.access-guard-service.forwardauth.address: "http://access-guard:8585/auth"
+      traefik.http.services.access-guard.loadbalancer.server.port: "8585"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - 8025:8025
+
+
+volumes:
+  mypy_cache:
