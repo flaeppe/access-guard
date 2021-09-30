@@ -39,18 +39,19 @@ def command(argv: list[str] | None = None) -> None:
         dest="auth_host",
         help="The entrypoint domain name for access guard (without protocol or path)",
     )
-    parser.add_argument(
-        "-t",
-        "--auth-token",
-        required=False,
-        type=str,
-        default=None,
-        dest="auth_token",
-        help=(
-            "Value that is expected in an Authorization: Token <AUTH TOKEN> header on"
-            " requests to access guard"
-        ),
-    )
+    # TODO: Support auth token
+    # parser.add_argument(
+    #    "-t",
+    #    "--auth-token",
+    #    required=False,
+    #    type=str,
+    #    default=None,
+    #    dest="auth_token",
+    #    help=(
+    #        "Value that is expected in an Authorization: Token <AUTH TOKEN> header on"
+    #        " requests to access guard"
+    #    ),
+    # )
     parser.add_argument(
         "-c",
         "--cookie-domain",

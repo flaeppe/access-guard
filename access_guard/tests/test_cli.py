@@ -67,7 +67,6 @@ def test_defaults() -> None:
             "email_patterns": [re.compile(r".*@defaults.com")],
             "secret": "a secret",
             "auth_host": "testing-defaults.local",
-            "auth_token": None,
             "cookie_domain": "testing-defaults.local",
             "cookie_secure": False,
             "email_host": "email-host",
