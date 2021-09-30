@@ -50,9 +50,7 @@ class Signers(NamedTuple):
 SIGNING = Signers(
     timed=URLSafeTimedSerializer(
         str(SECRET),
-        # TODO: Change salt
-        # salt="access_guard.signing.timed",
-        salt="access_guard.config",
+        salt="access_guard.signing.timed",
         signer_kwargs={"sep": ".", "digest_method": hashlib.sha256},
     ),
     separator=".",
