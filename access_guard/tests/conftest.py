@@ -15,6 +15,7 @@ environ.load(  # noqa
         "secret": "supersecret",
         "auth_host": "testserver.local",
         "cookie_domain": "testserver.local",
+        "cookie_secure": False,
         "email_host": "mailhog",
         "email_port": "1025",
         "from_email": "access-guard@local.com",

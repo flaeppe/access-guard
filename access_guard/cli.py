@@ -59,6 +59,15 @@ def command(argv: list[str] | None = None) -> None:
         dest="cookie_domain",
         help="...",
     )
+    parser.add_argument(
+        "--cookie-secure",
+        action="store_true",
+        dest="cookie_secure",
+        help=(
+            "Whether to only use secure cookies. When passed, cookies will be marked"
+            " as 'secure' [default: false]"
+        ),
+    )
     # TODO: Take help text inspiration from Django
     parser.add_argument(
         "--email-host",

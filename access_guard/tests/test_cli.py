@@ -69,6 +69,7 @@ def test_defaults() -> None:
             "auth_host": "testing-defaults.local",
             "auth_token": None,
             "cookie_domain": "testing-defaults.local",
+            "cookie_secure": False,
             "email_host": "email-host",
             "email_port": 666,
             "from_email": "webmaster@local.com",

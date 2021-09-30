@@ -100,7 +100,7 @@ async def prepare_email_auth(request: Request) -> Response:
             max_age=settings.LOGIN_COOKIE_MAX_AGE,
             expires=settings.LOGIN_COOKIE_MAX_AGE,
             domain=settings.COOKIE_DOMAIN,
-            secure=False,  # TODO: app.state.config.cookie_secure
+            secure=settings.COOKIE_SECURE,
             httponly=True,
         )
         return response
@@ -230,7 +230,7 @@ async def verify(request: Request) -> Response:
         max_age=settings.VERIFY_SIGNATURE_MAX_AGE,
         expires=settings.VERIFY_SIGNATURE_MAX_AGE,
         domain=settings.COOKIE_DOMAIN,
-        secure=False,  # TODO: app.state.config.cookie_secure
+        secure=settings.COOKIE_SECURE,
         httponly=True,
     )
 
