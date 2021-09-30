@@ -92,8 +92,7 @@ async def prepare_email_auth(request: Request) -> Response:
         response = RedirectResponse(
             # TODO: Take protocol from forward headers
             url=f"http://{settings.DOMAIN}/auth",
-            # TODO: Don't redirect POST (data)
-            status_code=HTTPStatus.TEMPORARY_REDIRECT,
+            status_code=HTTPStatus.SEE_OTHER,
         )
         response.set_cookie(
             key=LOGIN_COOKIE_KEY,

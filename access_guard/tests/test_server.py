@@ -76,7 +76,7 @@ class TestAuth:
             headers=forward_headers.serialize(),
             allow_redirects=False,
         )
-        assert response.status_code == HTTPStatus.TEMPORARY_REDIRECT
+        assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
 
@@ -225,7 +225,7 @@ class TestAuth:
             cookies=expired_login_cookie_set,
             allow_redirects=False,
         )
-        assert response.status_code == HTTPStatus.TEMPORARY_REDIRECT
+        assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
 
@@ -242,7 +242,7 @@ class TestAuth:
                 allow_redirects=False,
             )
 
-        assert response.status_code == HTTPStatus.TEMPORARY_REDIRECT
+        assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
         unsign.assert_called_once_with(
@@ -323,7 +323,7 @@ class TestAuth:
                 allow_redirects=False,
             )
 
-        assert response.status_code == HTTPStatus.TEMPORARY_REDIRECT
+        assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         unsign.assert_called_once_with(
             mock.ANY,
