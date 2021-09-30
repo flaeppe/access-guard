@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from http import HTTPStatus
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
@@ -31,8 +32,7 @@ logger = logging.getLogger(__name__)
 LOGIN_COOKIE_KEY = "access-guard-forwarded"
 VERIFIED_COOKIE_KEY = "access-guard-session"
 
-# TODO: Fix relative path
-templates = Jinja2Templates(directory="access_guard/templates")
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
 class TamperedLoginCookie(Exception):
