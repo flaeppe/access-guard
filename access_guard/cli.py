@@ -4,6 +4,8 @@ import argparse
 import re
 import sys
 
+from .__version__ import __version__
+
 
 def start_server() -> None:
     from access_guard import server
@@ -15,8 +17,9 @@ def command(argv: list[str] | None = None) -> None:
     argv = argv if argv is not None else sys.argv[1:]
     parser = argparse.ArgumentParser(prog="access-guard", description="...")
 
-    # TODO: Fix a real version
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s 0.1")
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     parser.add_argument(
         "email_patterns",
@@ -98,7 +101,3 @@ def command(argv: list[str] | None = None) -> None:
 
     environ.load(vars(args))
     start_server()
-
-
-if __name__ == "__main__":  # pragma: no cover
-    command()

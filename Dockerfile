@@ -69,4 +69,4 @@ ENV SOURCE_COMMIT $SOURCE_COMMIT
 # Set port
 EXPOSE 8585
 
-ENTRYPOINT ["python", "access_guard/cli.py"]
+ENTRYPOINT ["python", "-m", "access_guard"]
