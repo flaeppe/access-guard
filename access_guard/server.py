@@ -73,11 +73,11 @@ def check_if_verified(endpoint: Endpoint) -> Endpoint:
 
 
 async def prepare_email_auth(request: Request) -> Response:
-    if not validate_login_cookie(request):
+    forward_headers = validate_login_cookie(request)
+    if not forward_headers:
         forward_headers = ForwardHeaders.parse(request.headers)
         response = RedirectResponse(
-            # TODO: Take protocol from forward headers
-            url=f"http://{settings.DOMAIN}/auth",
+            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
             status_code=HTTPStatus.SEE_OTHER,
         )
         response.set_cookie(
@@ -97,8 +97,7 @@ async def prepare_email_auth(request: Request) -> Response:
     # As otherwise any form we render could post towards somewhere that'll 404.
     if request.base_url.netloc != settings.DOMAIN:
         return RedirectResponse(
-            # TODO: Take protocol from forward headers
-            url=f"http://{settings.DOMAIN}/auth",
+            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
             status_code=HTTPStatus.TEMPORARY_REDIRECT,
         )
     elif request.method == "POST":

@@ -71,14 +71,15 @@ class TestAuth:
         self.url = auth_url
 
     def test_redirects_to_auth_host_when_no_login_cookie(self) -> None:
-        forward_headers = ForwardHeadersFactory.create()
+        # We set proto to see that redirect is attempted with its value
+        forward_headers = ForwardHeadersFactory.create(proto="https")
         response = self.api_client.get(
             self.url,
             headers=forward_headers.serialize(),
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
+        assert response.headers["location"] == f"https://{settings.DOMAIN}/auth"
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
 
     def test_returns_success_with_valid_verification_cookie(self) -> None:
@@ -294,21 +295,31 @@ class TestAuth:
         )
 
     def test_redirects_to_auth_service_domain_if_not_there_before_form_validation(
-        self, login_cookie_set: RequestsCookieJar
+        self,
     ) -> None:
+        # We set proto to see that redirect is attempted with its value
+        forward_headers = ForwardHeadersFactory.create(proto="https")
+        cookies = RequestsCookieJar()
+        cookies.set(
+            name=settings.LOGIN_COOKIE_NAME,
+            value=forward_headers.encode(),
+            domain=settings.DOMAIN,
+            secure=False,
+            rest={"HttpOnly": True},
+        )
         with mock.patch.object(
             URL, "netloc", mock.PropertyMock(return_value="somewhere.com")
         ) as request_netloc:
             response = self.api_client.post(
                 self.url,
                 data={"email": "someone@test.com"},
-                cookies=login_cookie_set,
+                cookies=cookies,
                 allow_redirects=False,
             )
 
         assert response.status_code == HTTPStatus.TEMPORARY_REDIRECT
         assert "location" in response.headers
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
+        assert response.headers["location"] == f"https://{settings.DOMAIN}/auth"
         request_netloc.assert_called_once()
 
     def test_deletes_verification_cookie_when_expired(self) -> None:
