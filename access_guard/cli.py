@@ -58,7 +58,10 @@ def command(argv: list[str] | None = None) -> None:
         required=True,
         type=str,
         dest="cookie_domain",
-        help="...",
+        help=(
+            "The domain to use for cookies. Ensure this value covers domain set"
+            " for AUTH_HOST"
+        ),
     )
     parser.add_argument(
         "--cookie-secure",
@@ -87,7 +90,6 @@ def command(argv: list[str] | None = None) -> None:
             " [default: access-guard-session]"
         ),
     )
-    # TODO: Take help text inspiration from Django
     parser.add_argument(
         "--email-host",
         required=True,
