@@ -46,7 +46,7 @@ def validate_login_cookie(request: Request) -> ForwardHeaders | None:
         # thus allowing for generating a new one
         date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
         logger.info(
-            "parse_login_cookie.signature_expired %s", date_signed, exc_info=True
+            "validate_login_cookie.signature_expired %s", date_signed, exc_info=True
         )
         return None
     except BadData as exc:
