@@ -69,6 +69,24 @@ def command(argv: list[str] | None = None) -> None:
             " as 'secure' [default: false]"
         ),
     )
+    parser.add_argument(
+        "--login-cookie-name",
+        dest="login_cookie_name",
+        default="access-guard-forwarded",
+        help=(
+            "Name for cookie used during verification flow"
+            " [default: access-guard-forwarded]"
+        ),
+    )
+    parser.add_argument(
+        "--verified-cookie-name",
+        dest="verified_cookie_name",
+        default="access-guard-session",
+        help=(
+            "Name for cookie set when verification completed successfully"
+            " [default: access-guard-session]"
+        ),
+    )
     # TODO: Take help text inspiration from Django
     parser.add_argument(
         "--email-host",

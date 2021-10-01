@@ -16,6 +16,8 @@ environ.load(  # noqa
         "auth_host": "testserver.local",
         "cookie_domain": "testserver.local",
         "cookie_secure": False,
+        "login_cookie_name": "login-test",
+        "verified_cookie_name": "verified-test",
         "email_host": "mailhog",
         "email_port": "1025",
         "from_email": "access-guard@local.com",
@@ -39,7 +41,7 @@ async def api_client() -> AsyncGenerator[TestClient, None]:
 def login_cookie_set() -> RequestsCookieJar:
     cookie_jar = RequestsCookieJar()
     cookie_jar.set(
-        name="access-guard-forwarded",
+        name=settings.LOGIN_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
         domain=settings.DOMAIN,
         secure=False,
@@ -52,7 +54,7 @@ def login_cookie_set() -> RequestsCookieJar:
 def expired_login_cookie_set() -> RequestsCookieJar:
     cookie_jar = RequestsCookieJar()
     cookie_jar.set(
-        name="access-guard-forwarded",
+        name=settings.LOGIN_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
         domain=settings.DOMAIN,
         expires=-1,
@@ -72,7 +74,7 @@ def valid_verification() -> tuple[LoginSignature, RequestsCookieJar]:
     headers = ForwardHeadersFactory.create()
     cookies = RequestsCookieJar()
     cookies.set(
-        name="access-guard-forwarded",
+        name=settings.LOGIN_COOKIE_NAME,
         value=headers.encode(),
         domain=settings.DOMAIN,
         secure=False,

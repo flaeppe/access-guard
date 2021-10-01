@@ -38,8 +38,10 @@ def assert_cookie_unset(cookie: str, response: Response, domain: str) -> None:
     assert cookies[cookie]["domain"] == domain
 
 
-assert_login_cookie_unset = partial(assert_cookie_unset, "access-guard-forwarded")
-assert_verification_cookie_unset = partial(assert_cookie_unset, "access-guard-session")
+assert_login_cookie_unset = partial(assert_cookie_unset, settings.LOGIN_COOKIE_NAME)
+assert_verification_cookie_unset = partial(
+    assert_cookie_unset, settings.VERIFIED_COOKIE_NAME
+)
 
 
 def assert_valid_login_cookie(
@@ -48,8 +50,8 @@ def assert_valid_login_cookie(
     domain: str,
 ) -> None:
     cookies = get_cookies(response)
-    assert "access-guard-forwarded" in cookies
-    cookie = cookies["access-guard-forwarded"]
+    assert settings.LOGIN_COOKIE_NAME in cookies
+    cookie = cookies[settings.LOGIN_COOKIE_NAME]
     assert settings.SIGNING.timed.loads(cookie.value) == forward_headers.serialize()
     assert cookie["max-age"] == "3600"
     assert cookie["domain"] == domain
@@ -82,7 +84,7 @@ class TestAuth:
     def test_returns_success_with_valid_verification_cookie(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
             domain=settings.DOMAIN,
             secure=False,
@@ -90,7 +92,7 @@ class TestAuth:
         )
         # Set a login cookie and see that it's removed
         cookie_jar.set(
-            name="access-guard-forwarded",
+            name=settings.LOGIN_COOKIE_NAME,
             value="something",
             domain=settings.DOMAIN,
             secure=False,
@@ -207,7 +209,7 @@ class TestAuth:
         signature = forward_headers.encode()
         cookies = RequestsCookieJar()
         cookies.set(
-            name="access-guard-forwarded",
+            name=settings.LOGIN_COOKIE_NAME,
             value=signature[1:],
             domain=settings.DOMAIN,
             secure=False,
@@ -255,7 +257,7 @@ class TestAuth:
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
         unsign.assert_called_once_with(
             mock.ANY,
-            login_cookie_set["access-guard-forwarded"].encode("utf-8"),
+            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
             max_age=60 * 60,
             return_timestamp=True,
         )
@@ -286,7 +288,7 @@ class TestAuth:
         assert_login_cookie_unset(response, settings.DOMAIN)
         unsign.assert_called_once_with(
             mock.ANY,
-            login_cookie_set["access-guard-forwarded"].encode("utf-8"),
+            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
             max_age=60 * 60,
             return_timestamp=True,
         )
@@ -314,7 +316,7 @@ class TestAuth:
         session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
         assert isinstance(session_value, str)
         request_cookies.set(
-            name="access-guard-session",
+            name="verified-test",
             value=session_value,
             domain=settings.DOMAIN,
             secure=False,
@@ -341,10 +343,10 @@ class TestAuth:
         )
         cookies = get_cookies(response)
         assert set(cookies.keys()) == {
-            "access-guard-session",
-            "access-guard-forwarded",
+            settings.VERIFIED_COOKIE_NAME,
+            settings.LOGIN_COOKIE_NAME,
         }
-        assert cookies["access-guard-session"].value == ""
+        assert cookies[settings.VERIFIED_COOKIE_NAME].value == ""
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
 
     def test_ignores_tampered_verification_cookie(self) -> None:
@@ -352,7 +354,7 @@ class TestAuth:
         assert isinstance(session_value, str)
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=session_value[1:],
             domain=settings.DOMAIN,
             secure=False,
@@ -368,7 +370,7 @@ class TestAuth:
     def test_handles_verification_cookie_with_bad_data(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value="baddata",
             domain=settings.DOMAIN,
             secure=False,
@@ -388,7 +390,7 @@ class TestAuth:
     def test_verified_with_email_not_matching_patterns_conf_returns_unauthorized(self):
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
             domain=settings.DOMAIN,
             secure=False,
@@ -441,7 +443,7 @@ class TestVerify:
         headers = ForwardHeadersFactory.create()
         request_cookies = RequestsCookieJar()
         request_cookies.set(
-            name="access-guard-forwarded",
+            name=settings.LOGIN_COOKIE_NAME,
             value=headers.encode(),
             domain=settings.DOMAIN,
             secure=False,
@@ -465,10 +467,10 @@ class TestVerify:
             f"{headers.proto}://{headers.host}{headers.uri}"
         )
         cookies = get_cookies(response)
-        assert "access-guard-session" in cookies
-        assert settings.SIGNING.timed.loads(cookies["access-guard-session"].value) == {
-            "email": "someone@test.com"
-        }
+        assert settings.VERIFIED_COOKIE_NAME in cookies
+        assert settings.SIGNING.timed.loads(
+            cookies[settings.VERIFIED_COOKIE_NAME].value
+        ) == {"email": "someone@test.com"}
         assert_login_cookie_unset(response, settings.DOMAIN)
 
     def test_returns_bad_request_with_invalid_code(
@@ -500,7 +502,7 @@ class TestVerify:
         signature = forward_headers.encode()
         cookies = RequestsCookieJar()
         cookies.set(
-            name="access-guard-forwarded",
+            name=settings.LOGIN_COOKIE_NAME,
             value=signature[1:],
             domain=settings.DOMAIN,
             secure=False,
@@ -545,7 +547,7 @@ class TestVerify:
         assert_verification_cookie_unset(response, settings.DOMAIN)
         unsign.assert_called_once_with(
             mock.ANY,
-            login_cookie_set["access-guard-forwarded"].encode("utf-8"),
+            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
             max_age=60 * 60,
             return_timestamp=True,
         )
@@ -589,7 +591,7 @@ class TestVerify:
     def test_returns_success_with_valid_verification_cookie(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
             domain=settings.DOMAIN,
             secure=False,
@@ -597,7 +599,7 @@ class TestVerify:
         )
         # Set a login cookie and see that it's removed
         cookie_jar.set(
-            name="access-guard-forwarded",
+            name=settings.LOGIN_COOKIE_NAME,
             value="something",
             domain=settings.DOMAIN,
             secure=False,
@@ -615,7 +617,7 @@ class TestVerify:
         assert isinstance(session_value, str)
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=session_value[1:],
             domain=settings.DOMAIN,
             secure=False,
@@ -636,7 +638,7 @@ class TestVerify:
     def test_handles_verification_cookie_with_bad_data(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value="baddata",
             domain=settings.DOMAIN,
             secure=False,
@@ -741,7 +743,7 @@ class TestVerify:
     def test_verified_with_email_not_matching_patterns_conf_redirects_to_login(self):
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
-            name="access-guard-session",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
             domain=settings.DOMAIN,
             secure=False,

@@ -30,10 +30,6 @@ logging.basicConfig(level=(logging.DEBUG if settings.DEBUG else logging.INFO))
 logger = logging.getLogger(__name__)
 
 
-# TODO: Make these 2 settings
-LOGIN_COOKIE_KEY = "access-guard-forwarded"
-VERIFIED_COOKIE_KEY = "access-guard-session"
-
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
@@ -42,7 +38,7 @@ class TamperedLoginCookie(Exception):
 
 
 def validate_login_cookie(request: Request) -> ForwardHeaders | None:
-    cookie = request.cookies.get(LOGIN_COOKIE_KEY)
+    cookie = request.cookies.get(settings.LOGIN_COOKIE_NAME)
     try:
         return ForwardHeaders.decode(cookie) if cookie else None
     except SignatureExpired as exc:
@@ -62,10 +58,12 @@ Endpoint = Callable[[Request], Awaitable[Response]]
 
 def check_if_verified(endpoint: Endpoint) -> Endpoint:
     async def check(request: Request) -> Response:
-        if Verification.check(request.cookies.get(VERIFIED_COOKIE_KEY, "")):
+        if Verification.check(request.cookies.get(settings.VERIFIED_COOKIE_NAME, "")):
             response = HTMLResponse("", status_code=HTTPStatus.OK)
-            if request.cookies.get(LOGIN_COOKIE_KEY):
-                response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+            if request.cookies.get(settings.LOGIN_COOKIE_NAME):
+                response.delete_cookie(
+                    settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+                )
             logger.info("verify_session.success")
             return response
 
@@ -83,7 +81,7 @@ async def prepare_email_auth(request: Request) -> Response:
             status_code=HTTPStatus.SEE_OTHER,
         )
         response.set_cookie(
-            key=LOGIN_COOKIE_KEY,
+            key=settings.LOGIN_COOKIE_NAME,
             value=forward_headers.encode(),
             max_age=settings.LOGIN_COOKIE_MAX_AGE,
             expires=settings.LOGIN_COOKIE_MAX_AGE,
@@ -146,16 +144,22 @@ async def auth(request: Request) -> Response:
         response = await prepare_email_auth(request)
     except TamperedLoginCookie:
         response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-        response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+        response.delete_cookie(
+            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
         logger.warning("auth.login_cookie.tampered")
     except (MissingForwardHeader, InvalidForwardHeader):
         response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-        response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+        response.delete_cookie(
+            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
         logger.warning("auth.forward_headers.invalid", exc_info=True)
 
     # Remove any non valid verification cookie when running flow to generate a new one
-    if request.cookies.get(VERIFIED_COOKIE_KEY):
-        response.delete_cookie(VERIFIED_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+    if request.cookies.get(settings.VERIFIED_COOKIE_NAME):
+        response.delete_cookie(
+            settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
     return response
 
 
@@ -174,7 +178,9 @@ async def verify(request: Request) -> Response:
         forward_headers = validate_login_cookie(request)
     except TamperedLoginCookie:
         response: Response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-        response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+        response.delete_cookie(
+            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
         logger.debug("verify.login_cookie.tampered", exc_info=True)
         return response
 
@@ -184,8 +190,12 @@ async def verify(request: Request) -> Response:
         )
         # No valid login cookie and no valid verification cookie at verify, then we drop
         # cookies and try to restart from auth
-        response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
-        response.delete_cookie(VERIFIED_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+        response.delete_cookie(
+            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
+        response.delete_cookie(
+            settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
         logger.debug("verify.login_cookie.invalid")
         return response
 
@@ -206,11 +216,11 @@ async def verify(request: Request) -> Response:
     response = RedirectResponse(
         url=forward_headers.url_unparsed, status_code=HTTPStatus.FOUND
     )
-    response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
+    response.delete_cookie(settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
     value = settings.SIGNING.timed.dumps({"email": form.email})
     assert isinstance(value, str)
     response.set_cookie(
-        key=VERIFIED_COOKIE_KEY,
+        key=settings.VERIFIED_COOKIE_NAME,
         value=value,
         max_age=settings.VERIFY_SIGNATURE_MAX_AGE,
         expires=settings.VERIFY_SIGNATURE_MAX_AGE,

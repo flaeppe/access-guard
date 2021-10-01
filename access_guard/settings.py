@@ -26,6 +26,8 @@ DOMAIN = config("auth_host", cast=str)
 # TODO: AUTH_TOKEN = config("auth_token", cast=Secret)
 COOKIE_DOMAIN = config("cookie_domain", cast=str)
 COOKIE_SECURE = config("cookie_secure", cast=bool, default=False)
+LOGIN_COOKIE_NAME = config("login_cookie_name", cast=str)
+VERIFIED_COOKIE_NAME = config("verified_cookie_name", cast=str)
 
 EMAIL_HOST = config("email_host", cast=str)
 EMAIL_PORT = config("email_port", cast=int)

@@ -69,6 +69,8 @@ def test_defaults() -> None:
             "auth_host": "testing-defaults.local",
             "cookie_domain": "testing-defaults.local",
             "cookie_secure": False,
+            "login_cookie_name": "access-guard-forwarded",
+            "verified_cookie_name": "access-guard-session",
             "email_host": "email-host",
             "email_port": 666,
             "from_email": "webmaster@local.com",
