@@ -18,9 +18,8 @@ from ..schema import ForwardHeaders, LoginSignature, PartialSignature
 from .factories import ForwardHeadersFactory
 
 mock_send_mail = mock.patch("access_guard.server.send_mail", autospec=True)
-# TODO: Make a mock.patch.object(?)
-mock_time_signer_unsign = mock.patch(
-    "itsdangerous.timed.TimestampSigner.unsign", autospec=True
+mock_time_signer_unsign = mock.patch.object(
+    settings.SIGNING.timed.signer, "unsign", autospec=True
 )
 
 
