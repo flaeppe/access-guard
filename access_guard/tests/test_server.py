@@ -115,12 +115,7 @@ class TestAuth:
         response = self.api_client.get(self.url, cookies=login_cookie_set)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.template.name == "send_email.html"
-        cookies = get_cookies(response)
-        assert "access-guard-forwarded" in cookies
-        assert (
-            cookies["access-guard-forwarded"]
-            == login_cookie_set["access-guard-forwarded"]
-        )
+        assert "set-cookie" not in response.headers
 
     @pytest.mark.parametrize(
         "email,msg,error_code",
