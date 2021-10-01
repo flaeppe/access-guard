@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from itsdangerous.exc import BadData, BadSignature
+from itsdangerous.exc import BadData, BadSignature, SignatureExpired
 from pydantic.error_wrappers import ValidationError
 
 from .. import settings
@@ -10,8 +10,13 @@ from ..schema import (
     InvalidForwardHeader,
     LoginSignature,
     PartialSignature,
+    Verification,
 )
 from .factories import ForwardHeadersFactory
+
+mock_time_signer_loads = mock.patch.object(
+    settings.SIGNING.timed, "loads", autospec=True
+)
 
 
 class TestForwardHeaders:
@@ -69,3 +74,43 @@ class TestPartialSignature:
         with mock_serializer_loads as loads, pytest.raises(ValidationError):
             loads.side_effect = Error("itsbad")
             PartialSignature.url_decode("something")
+
+
+class TestVerification:
+    @pytest.mark.parametrize(
+        "error",
+        (
+            pytest.param(SignatureExpired("expired"), id="signature expired"),
+            pytest.param(BadData("bad data"), id="bad data"),
+        ),
+    )
+    def test_decode_returns_none_when_loads_raises(self, error: Exception) -> None:
+        with mock_time_signer_loads as loads:
+            loads.side_effect = error
+            assert Verification.decode("signature") is None
+
+        loads.assert_called_once_with(
+            "signature", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
+        )
+
+    @pytest.mark.parametrize(
+        "signature",
+        (
+            pytest.param(
+                settings.SIGNING.timed.dumps({"email": "notanemail"}),
+                id="invalid email",
+            ),
+            pytest.param("", id="empty signature"),
+        ),
+    )
+    def test_decode_returns_none_on_invalid_email(self, signature: str) -> None:
+        assert Verification.decode(signature) is None
+
+    def test_check_returns_false_on_undecodable_signature(self) -> None:
+        assert Verification.check("") is False
+
+    def test_check_returns_false_on_signature_email_not_matching_configured_patterns(
+        self,
+    ) -> None:
+        signature = settings.SIGNING.timed.dumps({"email": "mismatch@email.com"})
+        assert Verification.check(signature) is False

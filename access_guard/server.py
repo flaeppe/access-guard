@@ -23,12 +23,14 @@ from .schema import (
     LoginSignature,
     MissingForwardHeader,
     PartialSignature,
+    Verification,
 )
 
 logging.basicConfig(level=(logging.DEBUG if settings.DEBUG else logging.INFO))
 logger = logging.getLogger(__name__)
 
 
+# TODO: Make these 2 settings
 LOGIN_COOKIE_KEY = "access-guard-forwarded"
 VERIFIED_COOKIE_KEY = "access-guard-session"
 
@@ -60,25 +62,11 @@ Endpoint = Callable[[Request], Awaitable[Response]]
 
 def check_if_verified(endpoint: Endpoint) -> Endpoint:
     async def check(request: Request) -> Response:
-        cookie = request.cookies.get(VERIFIED_COOKIE_KEY, "")
-        is_verified = False
-        try:
-            is_verified = bool(cookie) and bool(
-                settings.SIGNING.timed.loads(
-                    cookie, max_age=settings.VERIFY_SIGNATURE_MAX_AGE
-                )
-            )
-        except SignatureExpired:
-            logger.debug("verify_session.signature_expired", exc_info=True)
-        except BadData:
-            logger.warning("verify_session.bad_data", exc_info=True)
-
-        if is_verified:
-            # TODO: Verify payload with settings.EMAIL_PATTERNS
+        if Verification.check(request.cookies.get(VERIFIED_COOKIE_KEY, "")):
             response = HTMLResponse("", status_code=HTTPStatus.OK)
             if request.cookies.get(LOGIN_COOKIE_KEY):
                 response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
-            logger.debug("verify_session.success")
+            logger.info("verify_session.success")
             return response
 
         return await endpoint(request)
@@ -128,8 +116,7 @@ async def prepare_email_auth(request: Request) -> Response:
             )
 
         login_signature = LoginSignature.create(
-            email=form.email,
-            valid_code=form.matches_patterns(settings.EMAIL_PATTERNS),
+            email=form.email, valid_code=form.has_allowed_email
         )
         email_task = None
         if login_signature.has_valid_code:
@@ -216,10 +203,8 @@ async def verify(request: Request) -> Response:
             "verify.html", context, status_code=HTTPStatus.BAD_REQUEST
         )
 
-    # TODO: Verify email against pattern again
     response = RedirectResponse(
-        url=forward_headers.url_unparsed,
-        status_code=HTTPStatus.FOUND,
+        url=forward_headers.url_unparsed, status_code=HTTPStatus.FOUND
     )
     response.delete_cookie(LOGIN_COOKIE_KEY, domain=settings.COOKIE_DOMAIN)
     value = settings.SIGNING.timed.dumps({"email": form.email})

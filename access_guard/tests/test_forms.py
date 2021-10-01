@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from pydantic.error_wrappers import ValidationError
 
 from ..forms import SendEmailForm, VerificationForm
+from ..schema import LoginSignature
 
 
 @pytest.mark.parametrize(
@@ -76,7 +77,7 @@ class TestVerificationForm:
     def test_raises_validation_error_on_code(
         self, code: str, msg: str, error_code: str
     ) -> None:
-        data = {"email": "valid@email.com", "code": code, "signature": "something"}
+        data = {"email": "valid@test.com", "code": code, "signature": "something"}
         with pytest.raises(ValidationError) as exc:
             VerificationForm.parse_obj(data)
 
@@ -96,4 +97,21 @@ class TestVerificationForm:
                 "msg": "field required",
                 "type": "value_error.missing",
             },
+        ]
+
+    def test_raises_validation_error_on_email_not_matching_configured_patterns(
+        self,
+    ) -> None:
+        login_signature = LoginSignature.create("mismatch@email.com", valid_code=True)
+        with pytest.raises(ValidationError) as exc:
+            VerificationForm.parse_obj(
+                {"code": login_signature.code, **login_signature.partial.serialize()}
+            )
+
+        assert exc.value.errors() == [
+            {
+                "loc": ("email",),
+                "msg": "email is not allowed",
+                "type": "value_error.disallowed",
+            }
         ]

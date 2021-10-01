@@ -84,7 +84,7 @@ class TestAuth:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name="access-guard-session",
-            value=settings.SIGNING.timed.dumps({"email": "verified@email.com"}),
+            value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
             domain=settings.DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
@@ -122,25 +122,39 @@ class TestAuth:
             == login_cookie_set["access-guard-forwarded"]
         )
 
-    def test_rerenders_send_email_form_on_posting_invalid_email(
-        self, login_cookie_set: RequestsCookieJar
+    @pytest.mark.parametrize(
+        "email,msg,error_code",
+        (
+            pytest.param(
+                "!#@invalid@email.com",
+                "value is not a valid email address",
+                "value_error.email",
+                id="invalid email",
+            ),
+            pytest.param(
+                None, "field required", "value_error.missing", id="email as none"
+            ),
+            pytest.param(
+                ["i'm a list"],
+                "value is not a valid email address",
+                "value_error.email",
+                id="email as invalid type",
+            ),
+        ),
+    )
+    def test_rerenders_send_email_form_on_posting(
+        self, email: str, msg: str, error_code: str, login_cookie_set: RequestsCookieJar
     ) -> None:
         with mock_send_mail as send_mail:
             response = self.api_client.post(
-                self.url,
-                data={"email": "!#@invalid@email.com"},
-                cookies=login_cookie_set,
+                self.url, data={"email": email}, cookies=login_cookie_set
             )
 
         assert response.status_code == HTTPStatus.BAD_REQUEST
         assert response.template.name == "send_email.html"
         assert "errors" in response.context
         assert response.context["errors"] == [
-            {
-                "loc": ("email",),
-                "msg": "value is not a valid email address",
-                "type": "value_error.email",
-            },
+            {"loc": ("email",), "msg": msg, "type": error_code}
         ]
         send_mail.assert_not_called()
 
@@ -377,6 +391,24 @@ class TestAuth:
         assert_verification_cookie_unset(response, settings.DOMAIN)
         unsign.assert_called_once()
 
+    def test_verified_with_email_not_matching_patterns_conf_returns_unauthorized(self):
+        cookie_jar = RequestsCookieJar()
+        cookie_jar.set(
+            name="access-guard-session",
+            value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
+            domain=settings.DOMAIN,
+            secure=False,
+            rest={"HttpOnly": True},
+        )
+
+        response = self.api_client.get(
+            self.url, cookies=cookie_jar, allow_redirects=False
+        )
+
+        assert response.status_code == HTTPStatus.UNAUTHORIZED
+        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert_login_cookie_unset(response, settings.DOMAIN)
+
 
 class TestVerify:
     @pytest.fixture(autouse=True)
@@ -422,7 +454,7 @@ class TestVerify:
             rest={"HttpOnly": True},
         )
         login_signature = LoginSignature.create(
-            email="someone@email.com", valid_code=True
+            email="someone@test.com", valid_code=True
         )
         data = {"code": login_signature.code}
 
@@ -441,7 +473,7 @@ class TestVerify:
         cookies = get_cookies(response)
         assert "access-guard-session" in cookies
         assert settings.SIGNING.timed.loads(cookies["access-guard-session"].value) == {
-            "email": "someone@email.com"
+            "email": "someone@test.com"
         }
         assert_login_cookie_unset(response, settings.DOMAIN)
 
@@ -564,7 +596,7 @@ class TestVerify:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name="access-guard-session",
-            value=settings.SIGNING.timed.dumps({"email": "verified@email.com"}),
+            value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
             domain=settings.DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
@@ -676,9 +708,9 @@ class TestVerify:
         }
         assert response.context["errors"] == [
             {
-                "loc": ("__root__",),
-                "msg": "code is invalid",
-                "type": "value_error.invalid",
+                "loc": ("email",),
+                "msg": "email is not allowed",
+                "type": "value_error.disallowed",
             }
         ]
 
@@ -711,3 +743,24 @@ class TestVerify:
         assert response.context["errors"] == [
             {"loc": ("code",), "msg": "code is invalid", "type": "value_error.invalid"}
         ]
+
+    def test_verified_with_email_not_matching_patterns_conf_redirects_to_login(self):
+        cookie_jar = RequestsCookieJar()
+        cookie_jar.set(
+            name="access-guard-session",
+            value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
+            domain=settings.DOMAIN,
+            secure=False,
+            rest={"HttpOnly": True},
+        )
+
+        response = self.api_client.get(
+            self.url(("valid@test.com", "something")),
+            cookies=cookie_jar,
+            allow_redirects=False,
+        )
+
+        assert response.status_code == HTTPStatus.SEE_OTHER
+        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
+        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert_login_cookie_unset(response, settings.DOMAIN)

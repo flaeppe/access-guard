@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import BaseModel, root_validator, validator
 from pydantic.errors import PydanticValueError
 from pydantic.networks import EmailStr
 
 from .schema import LoginSignature
+from .validators import DisallowedEmail, check_email_is_allowed
 
 VERIFICATION_CODE_REGEX = re.compile(r"^\d{6}$")
 
@@ -20,18 +21,25 @@ class InvalidCode(PydanticValueError):
 class SendEmailForm(BaseModel):
     email: EmailStr
 
-    def matches_patterns(self, patterns: Sequence[re.Pattern]) -> bool:
-        for pattern in patterns:
-            if pattern.match(self.email):
-                return True
-
-        return False
+    @property
+    def has_allowed_email(self) -> bool:
+        # We avoid having this as a pydantic validator as checking against configured
+        # email patterns is wanted at a stage later than during BaseModel validation
+        try:
+            check_email_is_allowed(self.email)
+            return True
+        except DisallowedEmail:
+            return False
 
 
 class VerificationForm(BaseModel):
     email: EmailStr
     code: str
     signature: str
+
+    _validate_email = validator("email", allow_reuse=True, always=True)(
+        check_email_is_allowed
+    )
 
     @validator("code", always=True)
     def _validate_code(cls, code: str) -> str:

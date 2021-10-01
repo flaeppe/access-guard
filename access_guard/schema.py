@@ -10,14 +10,15 @@ from itsdangerous.encoding import (
     base64_decode as itsdangerous_base64_decode,
     base64_encode as itsdangerous_base64_encode,
 )
-from itsdangerous.exc import BadData, BadSignature
-from pydantic import BaseModel
+from itsdangerous.exc import BadData, BadSignature, SignatureExpired
+from pydantic import BaseModel, validator
 from pydantic.error_wrappers import ErrorWrapper, ValidationError
 from pydantic.networks import EmailStr
 from pydantic.utils import ROOT_KEY
 from starlette.datastructures import Headers
 
 from . import settings
+from .validators import check_email_is_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ HTTP_METHODS: set[HTTPMethod] = {
 }
 
 
+# TODO: Convert to BaseModel
 @dataclass(frozen=True)
 class ForwardHeaders:
     method: HTTPMethod
@@ -183,3 +185,36 @@ class LoginSignature:
         return PartialSignature(
             email=self.email, signature=self.signature_without_payload
         )
+
+
+class Verification(BaseModel):
+    email: EmailStr
+
+    _validate_email = validator("email", allow_reuse=True, always=True)(
+        check_email_is_allowed
+    )
+
+    @classmethod
+    def decode(cls, signature: str) -> Verification | None:
+        if not signature:
+            return None
+
+        try:
+            return cls.parse_obj(
+                settings.SIGNING.timed.loads(
+                    signature, max_age=settings.VERIFY_SIGNATURE_MAX_AGE
+                )
+            )
+        except SignatureExpired as exc:
+            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
+            logger.debug("verify.signature_expired %s", date_signed, exc_info=True)
+        except BadData:
+            logger.warning("verify.bad_data", exc_info=True)
+        except ValidationError:
+            logger.warning("verify.invalid", exc_info=True)
+
+        return None
+
+    @classmethod
+    def check(cls, signature: str) -> bool:
+        return bool(cls.decode(signature))
