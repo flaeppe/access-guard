@@ -19,6 +19,16 @@ requirements:
 		reqs/dev-requirements.in
 
 
+.PHONY: sync-local-requirements
+sync-local-requirements:
+	pip install \
+		pip==$$(cat Dockerfile | grep 'ENV PIP_PIP_VERSION' | cut -f3 -d' ') \
+		pip-tools==$$(cat Dockerfile | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
+	pip-sync \
+		reqs/requirements.txt \
+		reqs/dev-requirements.txt
+
+
 .PHONY: build
 build: export DOCKER_SCAN_SUGGEST=false
 build: export DOCKER_BUILDKIT=1
