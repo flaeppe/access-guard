@@ -1,12 +1,35 @@
 import re
+from contextlib import ExitStack
 from io import StringIO
 from unittest import mock
 
 import pytest
+from aiosmtplib.errors import SMTPException
 
 from .. import cli
 
+mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=True)
 mock_run_server = mock.patch("access_guard.server.run", autospec=True)
+mock_smtp_connection = mock.patch("access_guard.emails.get_connection", autospec=True)
+
+
+@pytest.fixture(scope="session")
+def valid_command_args() -> list[str]:
+    return [
+        ".*",
+        "--secret",
+        "supersecret",
+        "--auth-host",
+        "valid.local",
+        "--cookie-domain",
+        "valid.local",
+        "--email-host",
+        "email-host",
+        "--email-port",
+        "666",
+        "--from-email",
+        "webmaster@local.com",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -40,7 +63,6 @@ def test_email_patterns_are_required() -> None:
 
 
 def test_defaults() -> None:
-    mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=True)
     with mock_run_server as run_server, mock_load_environ as load_environ:
         cli.command(
             [
@@ -78,3 +100,35 @@ def test_defaults() -> None:
             "port": 8585,
         }
     )
+
+
+class TestHealthcheck:
+    @pytest.mark.parametrize(
+        "error",
+        (
+            pytest.param(ValueError, id="value error"),
+            pytest.param(SMTPException, id="smtp exception"),
+        ),
+    )
+    def test_command_exits_on_smtp_connect_raising(
+        self, error: Exception, valid_command_args: list[str]
+    ) -> None:
+        # TODO: Black seems to have troubles parsing multiline with..
+        with ExitStack() as stack:
+            stack.enter_context(mock_load_environ)
+            run_server = stack.enter_context(mock_run_server)
+            smtp_connection = stack.enter_context(mock_smtp_connection)
+            cm = stack.enter_context(pytest.raises(SystemExit))
+
+            smtp_connection.side_effect = error("failed")
+            cli.command(valid_command_args)
+
+        assert cm.value.code == 666
+        run_server.assert_not_called()
+
+    def test_returns_true_on_valid_smtp_connection(self):
+        with mock_smtp_connection as smtp_connection:
+            result = cli.healthcheck()
+
+        assert result is True
+        smtp_connection.assert_called_once_with()

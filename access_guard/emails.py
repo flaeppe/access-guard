@@ -22,6 +22,7 @@ async def send_mail(signature: LoginSignature) -> None:
     message = EmailMessage()
     message["From"] = settings.FROM_EMAIL
     message["To"] = signature.email
+    # TODO: Make subject come from a settings variable
     message["Subject"] = "The very secret code"
     message.set_content(f"{signature.code}")
     async with get_connection() as client:
