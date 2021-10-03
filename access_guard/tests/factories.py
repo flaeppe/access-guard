@@ -1,3 +1,5 @@
+from typing import Any
+
 import factory
 
 from ..server import ForwardHeaders
@@ -12,3 +14,9 @@ class ForwardHeadersFactory(factory.Factory):
 
     class Meta:
         model = ForwardHeaders
+
+    @classmethod
+    def _create(
+        cls, model_class: type[ForwardHeaders], *args: Any, **kwargs: Any
+    ) -> ForwardHeaders:
+        return model_class.construct(*args, **kwargs)

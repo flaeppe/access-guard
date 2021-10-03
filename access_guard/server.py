@@ -17,13 +17,7 @@ from starlette.templating import Jinja2Templates
 from . import settings
 from .emails import send_mail
 from .forms import SendEmailForm
-from .schema import (
-    ForwardHeaders,
-    InvalidForwardHeader,
-    LoginSignature,
-    MissingForwardHeader,
-    Verification,
-)
+from .schema import ForwardHeaders, LoginSignature, Verification
 
 logging.basicConfig(level=(logging.DEBUG if settings.DEBUG else logging.INFO))
 logger = logging.getLogger(__name__)
@@ -74,7 +68,7 @@ def check_if_verified(endpoint: Endpoint) -> Endpoint:
 async def prepare_email_auth(request: Request) -> Response:
     forward_headers = validate_login_cookie(request)
     if not forward_headers:
-        forward_headers = ForwardHeaders.parse(request.headers)
+        forward_headers = ForwardHeaders.parse_obj(request.headers)
         response = RedirectResponse(
             url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
             status_code=HTTPStatus.SEE_OTHER,
@@ -147,12 +141,12 @@ async def auth(request: Request) -> Response:
             settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
         )
         logger.warning("auth.login_cookie.tampered")
-    except (MissingForwardHeader, InvalidForwardHeader):
+    except ValidationError:
         response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
         response.delete_cookie(
             settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
         )
-        logger.warning("auth.forward_headers.invalid", exc_info=True)
+        logger.warning("auth.invalid", exc_info=True)
 
     # Remove any non valid verification cookie when running flow to generate a new one
     if request.cookies.get(settings.VERIFIED_COOKIE_NAME):

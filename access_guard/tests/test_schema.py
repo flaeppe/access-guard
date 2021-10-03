@@ -3,9 +3,10 @@ from unittest import mock
 
 import pytest
 from itsdangerous.exc import BadData, BadSignature, SignatureExpired
+from pydantic.error_wrappers import ValidationError
 
 from .. import settings
-from ..schema import ForwardHeaders, InvalidForwardHeader, LoginSignature, Verification
+from ..schema import ForwardHeaders, LoginSignature, Verification
 from .factories import ForwardHeadersFactory
 
 mock_time_signer_loads = mock.patch.object(
@@ -15,16 +16,75 @@ mock_time_signer_loads = mock.patch.object(
 
 class TestForwardHeaders:
     @pytest.mark.parametrize(
-        "changes",
+        "changes,error",
         (
-            pytest.param({"method": "invalid"}, id="non http method"),
-            pytest.param({"proto": "invalid"}, id="invalid http protocol"),
+            pytest.param(
+                {"x-forwarded-method": "invalid"},
+                [
+                    {
+                        "loc": ("x-forwarded-method",),
+                        "ctx": {
+                            "given": "invalid",
+                            "permitted": (
+                                "GET",
+                                "HEAD",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "CONNECT",
+                                "OPTIONS",
+                                "TRACE",
+                                "PATCH",
+                            ),
+                        },
+                        "msg": (
+                            "unexpected value; permitted: 'GET', 'HEAD', 'POST', 'PUT',"
+                            " 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE', 'PATCH'"
+                        ),
+                        "type": "value_error.const",
+                    }
+                ],
+                id="non http method",
+            ),
+            pytest.param(
+                {"x-forwarded-proto": "invalid"},
+                [
+                    {
+                        "loc": ("x-forwarded-proto",),
+                        "ctx": {"given": "invalid", "permitted": ("http", "https")},
+                        "msg": "unexpected value; permitted: 'http', 'https'",
+                        "type": "value_error.const",
+                    }
+                ],
+                id="invalid http protocol",
+            ),
         ),
     )
-    def test_raises_invalid_forward_header_on(self, changes: dict[str, str]) -> None:
-        forward_headers = ForwardHeadersFactory(**changes).serialize()
-        with pytest.raises(InvalidForwardHeader):
-            ForwardHeaders.parse(forward_headers)
+    def test_raises_invalid_forward_header_on(
+        self, changes: dict[str, str], error: list[dict]
+    ) -> None:
+        forward_headers = {
+            "x-forwarded-method": "GET",
+            "x-forwarded-proto": "http",
+            "x-forwarded-host": "testservice.local",
+            "x-forwarded-uri": "/",
+            "x-forwarded-for": "172.29.0.1",
+            **changes,
+        }
+        with pytest.raises(ValidationError) as exc:
+            ForwardHeaders.parse_obj(forward_headers)
+
+        assert exc.value.errors() == error
+
+    def test_serialize_returns_aliased_names(self):
+        forward_headers = ForwardHeadersFactory.create()
+        assert forward_headers.serialize() == {
+            "x-forwarded-method": forward_headers.method,
+            "x-forwarded-proto": forward_headers.proto,
+            "x-forwarded-host": forward_headers.host,
+            "x-forwarded-uri": forward_headers.uri,
+            "x-forwarded-for": forward_headers.source,
+        }
 
 
 class TestLoginSignature:
