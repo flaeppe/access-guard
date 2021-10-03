@@ -80,5 +80,5 @@ def valid_verification() -> tuple[LoginSignature, RequestsCookieJar]:
         secure=False,
         rest={"HttpOnly": True},
     )
-    login_signature = LoginSignature.create(email="someone@test.com", valid_code=True)
+    login_signature = LoginSignature.create(email="someone@test.com")
     return login_signature, cookies

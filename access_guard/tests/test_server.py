@@ -1,8 +1,6 @@
-import random
 from functools import partial, singledispatchmethod
 from http import HTTPStatus
 from http.cookies import SimpleCookie
-from typing import Any
 from unittest import mock
 
 import pytest
@@ -14,12 +12,12 @@ from starlette.datastructures import URL
 from starlette.testclient import TestClient
 
 from .. import settings
-from ..schema import ForwardHeaders, LoginSignature, PartialSignature
+from ..schema import ForwardHeaders, LoginSignature
 from .factories import ForwardHeadersFactory
 
 mock_send_mail = mock.patch("access_guard.server.send_mail", autospec=True)
-mock_time_signer_unsign = mock.patch.object(
-    settings.SIGNING.timed.signer, "unsign", autospec=True
+mock_time_signer_loads = mock.patch.object(
+    settings.SIGNING.timed, "loads", autospec=True
 )
 
 
@@ -58,10 +56,6 @@ def assert_valid_login_cookie(
     assert not cookie["secure"]
     assert cookie["httponly"]
     assert cookie["path"] == "/"
-
-
-def encode_for_path(payload: dict[str, Any]) -> str:
-    return base64_encode(settings.SIGNING.timed.serializer.dumps(payload)).decode()
 
 
 class TestAuth:
@@ -166,44 +160,27 @@ class TestAuth:
                 allow_redirects=False,
             )
 
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        path_param = LoginSignature.create(
-            email="someone@else.com", valid_code=False
-        ).partial.url_encode()
-        assert (
-            response.headers["location"]
-            == f"http://{settings.DOMAIN}/verify/{path_param}"
-        )
+        assert response.status_code == HTTPStatus.OK
+        assert response.template.name == "email_sent.html"
         send_mail.assert_not_called()
 
     def test_sends_verification_email_when_email_matching_pattern(
         self, login_cookie_set: RequestsCookieJar
     ) -> None:
-        mock_randint = mock.patch(
-            "access_guard.schema.secrets.randbelow", autospec=True
-        )
-        login_signature = LoginSignature(
-            email="someone@test.com",
-            code="001337",
-            signature=settings.SIGNING.timed.dumps(
-                {"email": "someone@test.com", "code": "001337"}
-            ),
-        )
-        with mock_send_mail as send_mail, mock_randint as randint:
-            randint.return_value = 1337
+        with mock_send_mail as send_mail:
             response = self.api_client.post(
                 self.url,
-                data={"email": login_signature.email},
+                data={"email": "someone@test.com"},
                 cookies=login_cookie_set,
                 allow_redirects=False,
             )
 
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        assert (
-            response.headers["location"]
-            == f"http://{settings.DOMAIN}/verify/{login_signature.partial.url_encode()}"
+        assert response.status_code == HTTPStatus.OK
+        assert response.template.name == "email_sent.html"
+        send_mail.assert_called_once_with(email="someone@test.com", link=mock.ANY)
+        send_mail.call_args.kwargs["link"].startswith(
+            f"http://{settings.DOMAIN}/verify/"
         )
-        send_mail.assert_called_once_with(login_signature)
 
     def test_returns_unauthenticated_with_tampered_login_cookie(self) -> None:
         forward_headers = ForwardHeadersFactory.create()
@@ -244,8 +221,8 @@ class TestAuth:
         self, login_cookie_set: RequestsCookieJar
     ) -> None:
         forward_headers = ForwardHeadersFactory.create()
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = SignatureExpired("expired")
+        with mock_time_signer_loads as loads:
+            loads.side_effect = SignatureExpired("expired")
             response = self.api_client.get(
                 self.url,
                 headers=forward_headers.serialize(),
@@ -256,11 +233,8 @@ class TestAuth:
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert_valid_login_cookie(response, forward_headers, settings.DOMAIN)
-        unsign.assert_called_once_with(
-            mock.ANY,
-            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
-            max_age=60 * 60,
-            return_timestamp=True,
+        loads.assert_called_once_with(
+            login_cookie_set[settings.LOGIN_COOKIE_NAME], max_age=60 * 60
         )
 
     def test_unsets_cookie_expired_login_cookie_when_forward_headers_are_missing(
@@ -277,8 +251,8 @@ class TestAuth:
     def test_deletes_signature_expired_login_cookie_when_forward_headers_are_missing(
         self, login_cookie_set: RequestsCookieJar
     ) -> None:
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = SignatureExpired("expired")
+        with mock_time_signer_loads as loads:
+            loads.side_effect = SignatureExpired("expired")
             response = self.api_client.get(
                 self.url,
                 cookies=login_cookie_set,
@@ -287,11 +261,9 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert_login_cookie_unset(response, settings.DOMAIN)
-        unsign.assert_called_once_with(
-            mock.ANY,
-            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
-            max_age=60 * 60,
-            return_timestamp=True,
+        loads.assert_called_once_with(
+            login_cookie_set[settings.LOGIN_COOKIE_NAME],
+            max_age=settings.LOGIN_COOKIE_MAX_AGE,
         )
 
     def test_redirects_to_auth_service_domain_if_not_there_before_form_validation(
@@ -335,8 +307,8 @@ class TestAuth:
         )
         forward_headers = ForwardHeadersFactory.create()
 
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = SignatureExpired("expired")
+        with mock_time_signer_loads as loads:
+            loads.side_effect = SignatureExpired("expired")
             response = self.api_client.get(
                 self.url,
                 cookies=request_cookies,
@@ -346,11 +318,8 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        unsign.assert_called_once_with(
-            mock.ANY,
-            session_value.encode("utf-8"),
-            max_age=60 * 60 * 24,
-            return_timestamp=True,
+        loads.assert_called_once_with(
+            session_value, max_age=settings.VERIFY_SIGNATURE_MAX_AGE
         )
         cookies = get_cookies(response)
         assert set(cookies.keys()) == {
@@ -387,8 +356,8 @@ class TestAuth:
             secure=False,
             rest={"HttpOnly": True},
         )
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = BadData("very bad")
+        with mock_time_signer_loads as loads:
+            loads.side_effect = BadData("very bad")
             response = self.api_client.get(
                 self.url, data={}, cookies=cookie_jar, allow_redirects=False
             )
@@ -396,7 +365,9 @@ class TestAuth:
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.text == ""
         assert_verification_cookie_unset(response, settings.DOMAIN)
-        unsign.assert_called_once()
+        loads.assert_called_once_with(
+            "baddata", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
+        )
 
     def test_verified_with_email_not_matching_patterns_conf_returns_unauthorized(self):
         cookie_jar = RequestsCookieJar()
@@ -426,31 +397,18 @@ class TestVerify:
     def url(self, obj: object) -> str:
         raise TypeError(  # pragma: no cover
             "Could not resolve url single dispatch method for object of type "
-            f"{obj.__qualname__!r}"
+            f"{type(obj).__qualname__!r}"
         )
 
     @url.register
     def _url_from_login_signature(self, obj: LoginSignature) -> str:
-        return f"/verify/{obj.partial.url_encode()}"
-
-    @url.register
-    def _url_from_two_tuple(self, obj: tuple) -> str:
-        email, signature = obj
-        path_param = PartialSignature(email=email, signature=signature).url_encode()
-        return f"/verify/{path_param}"
+        return f"/verify/{obj.signature}"
 
     @url.register
     def _url_from_string(self, obj: str) -> str:
         return f"/verify/{obj}"
 
-    @pytest.mark.parametrize(
-        "method,payload_key",
-        (
-            pytest.param("POST", "data", id="form"),
-            pytest.param("GET", "params", id="query params"),
-        ),
-    )
-    def test_can_verify_via(self, method: str, payload_key: str) -> None:
+    def test_can_verify(self) -> None:
         headers = ForwardHeadersFactory.create()
         request_cookies = RequestsCookieJar()
         request_cookies.set(
@@ -460,17 +418,10 @@ class TestVerify:
             secure=False,
             rest={"HttpOnly": True},
         )
-        login_signature = LoginSignature.create(
-            email="someone@test.com", valid_code=True
-        )
-        data = {"code": login_signature.code}
+        login_signature = LoginSignature.create(email="someone@test.com")
 
-        response = self.api_client.request(
-            method,
-            self.url(login_signature),
-            cookies=request_cookies,
-            allow_redirects=False,
-            **{payload_key: data},
+        response = self.api_client.get(
+            self.url(login_signature), cookies=request_cookies, allow_redirects=False
         )
 
         assert response.status_code == HTTPStatus.FOUND
@@ -484,29 +435,20 @@ class TestVerify:
         ) == {"email": "someone@test.com"}
         assert_login_cookie_unset(response, settings.DOMAIN)
 
-    def test_returns_bad_request_with_invalid_code(
+    def test_returns_not_found_when_signature_validation_returns_none(
         self, valid_verification: tuple[LoginSignature, RequestsCookieJar]
     ) -> None:
-        login_signature, request_cookies = valid_verification
-        swap_choices = set(range(9)) - {int(login_signature.code[0])}
-        data = {
-            "code": str(random.choice(list(swap_choices))) + login_signature.code[1:],
-        }
-        response = self.api_client.post(
-            self.url(login_signature),
-            data=data,
-            cookies=request_cookies,
-            allow_redirects=False,
-        )
+        login_signature, cookies = valid_verification
+        with mock.patch.object(LoginSignature, "decode", autospec=True) as validate:
+            validate.return_value = None
+            response = self.api_client.get(
+                self.url(login_signature),
+                cookies=cookies,
+                allow_redirects=False,
+            )
 
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert response.context["errors"] == [
-            {
-                "loc": ("__root__",),
-                "msg": "code is invalid",
-                "type": "value_error.invalid",
-            }
-        ]
+        assert response.status_code == HTTPStatus.NOT_FOUND
+        validate.assert_called_once_with(login_signature.signature)
 
     def test_returns_unauthenticated_with_tampered_login_cookie(self) -> None:
         forward_headers = ForwardHeadersFactory.create()
@@ -520,7 +462,7 @@ class TestVerify:
             rest={"HttpOnly": True},
         )
         response = self.api_client.get(
-            self.url(("tampered@email.com", "signed")),
+            self.url("doesnotmatter"),
             headers=forward_headers.serialize(),
             cookies=cookies,
             allow_redirects=False,
@@ -532,7 +474,7 @@ class TestVerify:
         self, expired_login_cookie_set: RequestsCookieJar
     ) -> None:
         response = self.api_client.get(
-            self.url(("expired@email.com", "signed")),
+            self.url("doesnotmatter"),
             cookies=expired_login_cookie_set,
             allow_redirects=False,
         )
@@ -544,10 +486,10 @@ class TestVerify:
     def test_redirects_to_auth_on_signature_expired_login_cookie(
         self, login_cookie_set: RequestsCookieJar
     ) -> None:
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = SignatureExpired("expired")
+        with mock_time_signer_loads as loads:
+            loads.side_effect = SignatureExpired("expired")
             response = self.api_client.get(
-                self.url(("expired@email.com", "signed")),
+                self.url("doesnotmatter"),
                 cookies=login_cookie_set,
                 allow_redirects=False,
             )
@@ -556,48 +498,9 @@ class TestVerify:
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert_login_cookie_unset(response, settings.DOMAIN)
         assert_verification_cookie_unset(response, settings.DOMAIN)
-        unsign.assert_called_once_with(
-            mock.ANY,
-            login_cookie_set[settings.LOGIN_COOKIE_NAME].encode("utf-8"),
-            max_age=60 * 60,
-            return_timestamp=True,
+        loads.assert_called_once_with(
+            login_cookie_set[settings.LOGIN_COOKIE_NAME], max_age=60 * 60
         )
-
-    def test_can_not_verify_invalid_generated_signature(
-        self, login_cookie_set: RequestsCookieJar
-    ) -> None:
-        login_signature = LoginSignature.create(
-            email="someone@test.com", valid_code=False
-        )
-        response = self.api_client.post(
-            self.url(login_signature),
-            data={"code": login_signature.code},
-            cookies=login_cookie_set,
-            allow_redirects=False,
-        )
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert response.template.name == "verify.html"
-        assert set(response.context.keys()) == {
-            "request",
-            "partial_signature",
-            "errors",
-        }
-        assert response.context["partial_signature"] == login_signature.partial
-        assert response.context["errors"] == [
-            {"loc": ("code",), "msg": "code is invalid", "type": "value_error.invalid"},
-        ]
-
-    def test_returns_bad_request_on_verify_refresh_page(
-        self, valid_verification: tuple[LoginSignature, RequestsCookieJar]
-    ) -> None:
-        login_signature, cookies = valid_verification
-        response = self.api_client.get(self.url(login_signature), cookies=cookies)
-
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert response.template.name == "verify.html"
-        # Don't expect errors when no data was sent
-        assert set(response.context.keys()) == {"request", "partial_signature"}
-        assert response.context["partial_signature"] == login_signature.partial
 
     def test_returns_success_with_valid_verification_cookie(self) -> None:
         cookie_jar = RequestsCookieJar()
@@ -616,9 +519,7 @@ class TestVerify:
             secure=False,
             rest={"HttpOnly": True},
         )
-        response = self.api_client.post(
-            self.url(("success@email.com", "signed")), data={}, cookies=cookie_jar
-        )
+        response = self.api_client.get(self.url("notasignature"), cookies=cookie_jar)
         assert response.status_code == HTTPStatus.OK
         assert response.text == ""
         assert_login_cookie_unset(response, settings.DOMAIN)
@@ -634,9 +535,8 @@ class TestVerify:
             secure=False,
             rest={"HttpOnly": True},
         )
-        response = self.api_client.post(
-            self.url(("tampered@email.com", "signed")),
-            data={},
+        response = self.api_client.get(
+            self.url(session_value),
             cookies=cookie_jar,
             allow_redirects=False,
         )
@@ -655,101 +555,41 @@ class TestVerify:
             secure=False,
             rest={"HttpOnly": True},
         )
-        with mock_time_signer_unsign as unsign:
-            unsign.side_effect = BadData("very bad")
-            response = self.api_client.get(
-                self.url(("bad@data.com", "signed")),
-                cookies=cookie_jar,
-                allow_redirects=False,
-            )
+        response = self.api_client.get(
+            self.url("doesnotmatter"),
+            cookies=cookie_jar,
+            allow_redirects=False,
+        )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
         assert response.text == ""
         assert_login_cookie_unset(response, settings.DOMAIN)
         assert_verification_cookie_unset(response, settings.DOMAIN)
-        unsign.assert_called_once()
 
     @pytest.mark.parametrize(
         "path_param",
         (
             pytest.param(base64_encode("notjson").decode(), id="is not valid json"),
             pytest.param("notbase64encoded", id="is not base64 encoded"),
-            pytest.param(encode_for_path(["notdict"]), id="payload is not dict"),
             pytest.param(
-                encode_for_path({"email": "valid@email.com"}), id="payload missing key"
+                settings.SIGNING.timed.dumps(["notdict"]), id="payload is not dict"
             ),
+            pytest.param(settings.SIGNING.timed.dumps({}), id="payload missing key"),
             pytest.param(
-                encode_for_path({"email": "invalidemail", "signature": "something"}),
+                settings.SIGNING.timed.dumps({"email": "invalidemail"}),
                 id="payload email is not a valid email",
-            ),
-            pytest.param(
-                encode_for_path(
-                    {"email": "valid@email.com", "signature": ["I'm in a list"]}
-                ),
-                id="payload signature is not string",
             ),
         ),
     )
-    def test_returns_not_found_when_path_param(self, path_param: str) -> None:
-        response = self.api_client.get(self.url(path_param), allow_redirects=False)
+    def test_returns_not_found_when_signature(
+        self, path_param: str, login_cookie_set: RequestsCookieJar
+    ) -> None:
+        response = self.api_client.get(
+            self.url(path_param), cookies=login_cookie_set, allow_redirects=False
+        )
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert response.text == ""
-
-    def test_body_data_cannot_override_data_from_path_payload(
-        self, valid_verification: tuple[LoginSignature, RequestsCookieJar]
-    ) -> None:
-        login_signature, cookies = valid_verification
-        response = self.api_client.post(
-            self.url(("invalid@email.com", login_signature.signature_without_payload)),
-            data={"code": login_signature.code, "email": login_signature.email},
-            cookies=cookies,
-            allow_redirects=False,
-        )
-
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert set(response.context.keys()) == {
-            "request",
-            "partial_signature",
-            "errors",
-        }
-        assert response.context["errors"] == [
-            {
-                "loc": ("email",),
-                "msg": "email is not allowed",
-                "type": "value_error.disallowed",
-            }
-        ]
-
-    def test_data_from_path_payload_cannot_override_body_data(
-        self, valid_verification: tuple[LoginSignature, RequestsCookieJar]
-    ) -> None:
-        login_signature, cookies = valid_verification
-        data = {"code": "invalid"}
-        response = self.api_client.post(
-            self.url(
-                encode_for_path(
-                    {
-                        "email": login_signature.email,
-                        "signature": login_signature.signature_without_payload,
-                        "code": login_signature.code,
-                    }
-                )
-            ),
-            data=data,
-            cookies=cookies,
-            allow_redirects=False,
-        )
-
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert set(response.context.keys()) == {
-            "request",
-            "partial_signature",
-            "errors",
-        }
-        assert response.context["errors"] == [
-            {"loc": ("code",), "msg": "code is invalid", "type": "value_error.invalid"}
-        ]
 
     def test_verified_with_email_not_matching_patterns_conf_redirects_to_login(self):
         cookie_jar = RequestsCookieJar()
@@ -762,7 +602,7 @@ class TestVerify:
         )
 
         response = self.api_client.get(
-            self.url(("valid@test.com", "something")),
+            self.url("signature"),
             cookies=cookie_jar,
             allow_redirects=False,
         )

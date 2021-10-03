@@ -1,20 +1,14 @@
 from __future__ import annotations
 
 import logging
-import secrets
 from collections import abc
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from itsdangerous.encoding import (
-    base64_decode as itsdangerous_base64_decode,
-    base64_encode as itsdangerous_base64_encode,
-)
-from itsdangerous.exc import BadData, BadSignature, SignatureExpired
+from itsdangerous.exc import BadData, SignatureExpired
 from pydantic import BaseModel, validator
-from pydantic.error_wrappers import ErrorWrapper, ValidationError
+from pydantic.error_wrappers import ValidationError
 from pydantic.networks import EmailStr
-from pydantic.utils import ROOT_KEY
 from starlette.datastructures import Headers
 
 from . import settings
@@ -114,77 +108,46 @@ class ForwardHeaders:
         return encoded
 
 
-class PartialSignature(BaseModel):
+class LoginSignature(BaseModel):
     email: EmailStr
     signature: str
 
-    @classmethod
-    def url_decode(cls, value: str) -> PartialSignature:
-        serializer = settings.SIGNING.timed.serializer
-        try:
-            loaded = serializer.loads(itsdangerous_base64_decode(value))
-            if not isinstance(loaded, abc.Mapping):
-                raise TypeError("Encoded value was not a mapping")
-        except (BadData, ValueError, TypeError) as exc:
-            logger.debug("partial_signature.url_decode.failed", exc_info=True)
-            raise ValidationError([ErrorWrapper(exc, ROOT_KEY)], cls) from exc
-
-        return cls.parse_obj(loaded)
-
-    def url_encode(self) -> str:
-        serializer = settings.SIGNING.timed.serializer
-        return itsdangerous_base64_encode(serializer.dumps(self.serialize())).decode()
-
-    def serialize(self) -> dict[str, Any]:
-        return {"email": self.email, "signature": self.signature}
-
-
-@dataclass(frozen=True)
-class LoginSignature:
-    email: str
-    code: str
-    signature: str
+    _validate_email = validator("email", allow_reuse=True, always=True)(
+        check_email_is_allowed
+    )
 
     @classmethod
-    def create(cls, email: str, valid_code: bool) -> LoginSignature:
-        code = f"{secrets.randbelow(1000000):06d}" if valid_code else "invalid"
-        signature = settings.SIGNING.timed.dumps({"email": email, "code": code})
+    def create(cls, email: str) -> LoginSignature:
+        signature = settings.SIGNING.timed.dumps({"email": email})
         assert isinstance(signature, str)
-        return cls(email=email, code=code, signature=signature)
+        return cls(email=email, signature=signature)
 
     @classmethod
-    def is_valid(cls, email: str, code: str, signature: str) -> bool:
-        # Expects signature to not include the initially signed payload
-        # Basically a signature that comes out of 'create'
-        signer = settings.SIGNING.timed
-        payload = signer.dump_payload({"email": email, "code": code}).decode("utf-8")
-        full = settings.SIGNING.separator.join([payload, signature])
+    def decode(cls, signature: str) -> LoginSignature | None:
+        # TODO: DRY unsigning for reusage with Verification
         try:
-            signer.loads(full, max_age=settings.LOGIN_SIGNATURE_MAX_AGE)
-            return True
-        except BadSignature:
-            return False
+            loaded = settings.SIGNING.timed.loads(
+                signature, max_age=settings.LOGIN_SIGNATURE_MAX_AGE
+            )
+        except SignatureExpired as exc:
+            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
+            logger.info("login_signature.decode.expired %s", date_signed)
+            return None
         except BadData:
-            logger.warning("login_signature.is_valid.bad_data", exc_info=True)
-            return False
+            logger.warning("login_signature.decode.bad_data", exc_info=True)
+            return None
 
-    @property
-    def has_valid_code(self) -> bool:
-        return self.code != "invalid"
+        if not isinstance(loaded, abc.MutableMapping):
+            # TODO: Log received type (type=type(loaded))
+            logger.error("login_signature.decode.payload_not_a_mapping")
+            return None
 
-    @property
-    def signature_without_payload(self) -> str:
-        # Throw away the data from the signature, so as whomever that wants to login
-        # has to provide its correct values
-        separator = settings.SIGNING.separator
-        __, timestamp, signed = self.signature.rsplit(separator, 2)
-        return f"{timestamp}{separator}{signed}"
-
-    @property
-    def partial(self) -> PartialSignature:
-        return PartialSignature(
-            email=self.email, signature=self.signature_without_payload
-        )
+        loaded["signature"] = signature
+        try:
+            return cls.parse_obj(loaded)
+        except ValidationError:
+            logger.error("login_signature.decode.invalid_payload", exc_info=True)
+            return None
 
 
 class Verification(BaseModel):
@@ -199,6 +162,7 @@ class Verification(BaseModel):
         if not signature:
             return None
 
+        # TODO: DRY unsigning for reusage with LoginSignature
         try:
             return cls.parse_obj(
                 settings.SIGNING.timed.loads(
@@ -207,11 +171,11 @@ class Verification(BaseModel):
             )
         except SignatureExpired as exc:
             date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-            logger.debug("verify.signature_expired %s", date_signed, exc_info=True)
+            logger.debug("verification.decode.signature_expired %s", date_signed)
         except BadData:
-            logger.warning("verify.bad_data", exc_info=True)
+            logger.warning("verification.decode.bad_data", exc_info=True)
         except ValidationError:
-            logger.warning("verify.invalid", exc_info=True)
+            logger.warning("verification.decode.invalid", exc_info=True)
 
         return None
 

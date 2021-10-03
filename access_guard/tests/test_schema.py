@@ -1,17 +1,11 @@
+from typing import Any
 from unittest import mock
 
 import pytest
 from itsdangerous.exc import BadData, BadSignature, SignatureExpired
-from pydantic.error_wrappers import ValidationError
 
 from .. import settings
-from ..schema import (
-    ForwardHeaders,
-    InvalidForwardHeader,
-    LoginSignature,
-    PartialSignature,
-    Verification,
-)
+from ..schema import ForwardHeaders, InvalidForwardHeader, LoginSignature, Verification
 from .factories import ForwardHeadersFactory
 
 mock_time_signer_loads = mock.patch.object(
@@ -39,41 +33,34 @@ class TestLoginSignature:
         (
             pytest.param(BadData, id="bad data"),
             pytest.param(BadSignature, id="bad signature"),
+            pytest.param(SignatureExpired, id="signature expired"),
         ),
     )
-    def test_is_valid_returns_false_on(self, Error: type[Exception]) -> None:
+    def test_decode_returns_none_on_loads_raising(self, Error: type[Exception]) -> None:
         with mock.patch.object(settings.SIGNING.timed, "loads", autospec=True) as loads:
             loads.side_effect = Error("itsbad")
-            result = LoginSignature.is_valid(
-                email="someone@email.com", code="123456", signature="something"
-            )
+            result = LoginSignature.decode(signature="something")
 
-        assert result is False
-
-    def test_has_valid_code_returns_false_when_code_is_invalid(self):
-        login_signature = LoginSignature.create(
-            email="someone@email.com", valid_code=False
+        assert result is None
+        loads.assert_called_once_with(
+            "something", max_age=settings.LOGIN_SIGNATURE_MAX_AGE
         )
-        assert login_signature.has_valid_code is False
-        assert login_signature.code == "invalid"
 
-
-class TestPartialSignature:
     @pytest.mark.parametrize(
-        "Error",
+        "payload",
         (
-            pytest.param(BadData, id="bad data"),
-            pytest.param(ValueError, id="value error"),
-            pytest.param(TypeError, id="type error"),
+            pytest.param({}, id="payload missing expected keys"),
+            pytest.param(["notamapping"], id="payload is not a mapping"),
+            pytest.param({"email": "notanemail"}, id="payload has an invalid email"),
+            pytest.param(
+                {"email": "not@allowed.com"},
+                id="email is not matching configured patterns",
+            ),
         ),
     )
-    def test_raises_validation_error_on(self, Error: type[Exception]) -> None:
-        mock_serializer_loads = mock.patch.object(
-            settings.SIGNING.timed.serializer, "loads", autospec=True
-        )
-        with mock_serializer_loads as loads, pytest.raises(ValidationError):
-            loads.side_effect = Error("itsbad")
-            PartialSignature.url_decode("something")
+    def test_decode_returns_none_when(self, payload: Any) -> None:
+        signature = settings.SIGNING.timed.dumps(payload)
+        assert LoginSignature.decode(signature) is None
 
 
 class TestVerification:

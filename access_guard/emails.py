@@ -3,7 +3,6 @@ from email.message import EmailMessage
 import aiosmtplib
 
 from . import settings
-from .schema import LoginSignature
 
 
 def get_connection() -> aiosmtplib.SMTP:
@@ -18,13 +17,13 @@ def get_connection() -> aiosmtplib.SMTP:
     )
 
 
-async def send_mail(signature: LoginSignature) -> None:
+async def send_mail(email: str, link: str) -> None:
     message = EmailMessage()
     message["From"] = settings.FROM_EMAIL
-    message["To"] = signature.email
+    message["To"] = email
     # TODO: Make subject come from a settings variable
-    message["Subject"] = "The very secret code"
-    message.set_content(f"{signature.code}")
+    message["Subject"] = "The very secret link"
+    message.set_content(link)
     async with get_connection() as client:
         assert isinstance(client, aiosmtplib.SMTP)
         await client.send_message(message)

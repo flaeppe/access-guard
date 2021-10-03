@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
 from pydantic.error_wrappers import ValidationError
@@ -16,13 +16,12 @@ from starlette.templating import Jinja2Templates
 
 from . import settings
 from .emails import send_mail
-from .forms import SendEmailForm, VerificationForm
+from .forms import SendEmailForm
 from .schema import (
     ForwardHeaders,
     InvalidForwardHeader,
     LoginSignature,
     MissingForwardHeader,
-    PartialSignature,
     Verification,
 )
 
@@ -112,19 +111,20 @@ async def prepare_email_auth(request: Request) -> Response:
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
-        login_signature = LoginSignature.create(
-            email=form.email, valid_code=form.has_allowed_email
-        )
         email_task = None
-        if login_signature.has_valid_code:
-            email_task = BackgroundTask(send_mail, signature=login_signature)
+        if form.has_allowed_email:
+            login_signature = LoginSignature.create(email=form.email)
+            email_task = BackgroundTask(
+                send_mail,
+                email=login_signature.email,
+                link=request.url_for("verify", signature=login_signature.signature),
+            )
             logger.debug("auth.send_verification_email")
 
-        return RedirectResponse(
-            url=request.url_for(
-                "verify", partial_signature=login_signature.partial.url_encode()
-            ),
-            status_code=HTTPStatus.SEE_OTHER,
+        return templates.TemplateResponse(
+            "email_sent.html",
+            {"request": request},
+            status_code=HTTPStatus.OK,
             # TODO: Starlette is missing an `Optional` as default value is None
             background=email_task,  # type: ignore[arg-type]
         )
@@ -164,14 +164,6 @@ async def auth(request: Request) -> Response:
 
 @check_if_verified
 async def verify(request: Request) -> Response:
-    try:
-        partial_signature = PartialSignature.url_decode(
-            request.path_params["partial_signature"]
-        )
-    except ValidationError:
-        logger.debug("verify.path_params.invalid", exc_info=True)
-        return HTMLResponse("", status_code=HTTPStatus.NOT_FOUND)
-
     forward_headers = None
     try:
         forward_headers = validate_login_cookie(request)
@@ -198,25 +190,16 @@ async def verify(request: Request) -> Response:
         logger.debug("verify.login_cookie.invalid")
         return response
 
-    data = await request.form() if request.method == "POST" else request.query_params
-    try:
-        form = VerificationForm.parse_obj({**data, **partial_signature.serialize()})
-    except ValidationError as exc:
-        context: dict[str, Any] = {
-            "request": request,
-            "partial_signature": partial_signature,
-        }
-        if data:  # Avoid rendering errors when no data was sent
-            context["errors"] = exc.errors()
-        return templates.TemplateResponse(
-            "verify.html", context, status_code=HTTPStatus.BAD_REQUEST
-        )
+    login_signature = LoginSignature.decode(request.path_params["signature"])
+    if not login_signature:
+        logger.debug("verify.login_signature.invalid")
+        return HTMLResponse("", status_code=HTTPStatus.NOT_FOUND)
 
     response = RedirectResponse(
         url=forward_headers.url_unparsed, status_code=HTTPStatus.FOUND
     )
     response.delete_cookie(settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
-    value = settings.SIGNING.timed.dumps({"email": form.email})
+    value = settings.SIGNING.timed.dumps({"email": login_signature.email})
     assert isinstance(value, str)
     response.set_cookie(
         key=settings.VERIFIED_COOKIE_NAME,
@@ -227,18 +210,13 @@ async def verify(request: Request) -> Response:
         secure=settings.COOKIE_SECURE,
         httponly=True,
     )
-
+    logger.info("verify.success")
     return response
 
 
 routes = [
     Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
-    Route(
-        "/verify/{partial_signature:str}",
-        endpoint=verify,
-        methods=["GET", "POST"],
-        name="verify",
-    ),
+    Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
 ]
 app = Starlette(routes=routes, debug=settings.DEBUG)
 
