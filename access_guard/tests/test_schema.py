@@ -6,7 +6,7 @@ from itsdangerous.exc import BadData, BadSignature, SignatureExpired
 from pydantic.error_wrappers import ValidationError
 
 from .. import settings
-from ..schema import ForwardHeaders, LoginSignature, Verification
+from ..schema import Decodable, ForwardHeaders, LoginSignature, Verification
 from .factories import ForwardHeadersFactory
 
 mock_time_signer_loads = mock.patch.object(
@@ -87,30 +87,59 @@ class TestForwardHeaders:
         }
 
 
-class TestLoginSignature:
+class DecodableClass(Decodable):
+    MAX_AGE = 666
+
+
+class TestDecodable:
     @pytest.mark.parametrize(
-        "Error",
+        "error",
         (
-            pytest.param(BadData, id="bad data"),
-            pytest.param(BadSignature, id="bad signature"),
-            pytest.param(SignatureExpired, id="signature expired"),
+            pytest.param(BadData("baddata"), id="bad data"),
+            pytest.param(BadSignature("badsignature"), id="bad signature"),
+            pytest.param(SignatureExpired("expired"), id="signature expired"),
         ),
     )
-    def test_decode_returns_none_on_loads_raising(self, Error: type[Exception]) -> None:
-        with mock.patch.object(settings.SIGNING.timed, "loads", autospec=True) as loads:
-            loads.side_effect = Error("itsbad")
-            result = LoginSignature.decode(signature="something")
+    def test_decode_returns_none_when_signer_loads_raises(
+        self, error: Exception
+    ) -> None:
+        with mock_time_signer_loads as loads:
+            loads.side_effect = error
+            result = DecodableClass.decode("doesnotmatter")
 
         assert result is None
+        loads.assert_called_once_with("doesnotmatter", max_age=666)
+
+    @pytest.mark.parametrize(
+        "value",
+        (
+            pytest.param("", id="empty"),
+            pytest.param(
+                settings.SIGNING.timed.dumps(["not a mapping"]),
+                id="payload is not a mapping",
+            ),
+        ),
+    )
+    def test_decode_returns_none_on_signature(self, value: str) -> None:
+        assert DecodableClass.decode(value) is None
+
+
+class TestLoginSignature:
+    def test_signing_loads_is_called_with_login_signature_max_age(self):
+        signature = "doesnotmatter"
+        with mock_time_signer_loads as loads:
+            loads.return_value = {"email": "someone@test.com", "signature": signature}
+            result = LoginSignature.loads(signature)
+
+        assert result == LoginSignature(email="someone@test.com", signature=signature)
         loads.assert_called_once_with(
-            "something", max_age=settings.LOGIN_SIGNATURE_MAX_AGE
+            signature, max_age=settings.LOGIN_SIGNATURE_MAX_AGE
         )
 
     @pytest.mark.parametrize(
         "payload",
         (
             pytest.param({}, id="payload missing expected keys"),
-            pytest.param(["notamapping"], id="payload is not a mapping"),
             pytest.param({"email": "notanemail"}, id="payload has an invalid email"),
             pytest.param(
                 {"email": "not@allowed.com"},
@@ -118,46 +147,41 @@ class TestLoginSignature:
             ),
         ),
     )
-    def test_decode_returns_none_when(self, payload: Any) -> None:
+    def test_loads_returns_none_when(self, payload: Any) -> None:
         signature = settings.SIGNING.timed.dumps(payload)
-        assert LoginSignature.decode(signature) is None
+        assert LoginSignature.loads(signature) is None
 
 
 class TestVerification:
-    @pytest.mark.parametrize(
-        "error",
-        (
-            pytest.param(SignatureExpired("expired"), id="signature expired"),
-            pytest.param(BadData("bad data"), id="bad data"),
-        ),
-    )
-    def test_decode_returns_none_when_loads_raises(self, error: Exception) -> None:
+    def test_signing_loads_is_called_with_verify_signature_max_age(self):
         with mock_time_signer_loads as loads:
-            loads.side_effect = error
-            assert Verification.decode("signature") is None
+            loads.return_value = {"email": "someone@test.com"}
+            result = Verification.loads("doesnotmatter")
 
+        assert result == Verification(email="someone@test.com")
         loads.assert_called_once_with(
-            "signature", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
+            "doesnotmatter", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
         )
 
     @pytest.mark.parametrize(
-        "signature",
+        "payload",
         (
+            pytest.param({}, id="payload missing expected keys"),
+            pytest.param({"email": "notanemail"}, id="payload has an invalid email"),
             pytest.param(
-                settings.SIGNING.timed.dumps({"email": "notanemail"}),
-                id="invalid email",
+                {"email": "not@allowed.com"},
+                id="email is not matching configured patterns",
             ),
-            pytest.param("", id="empty signature"),
         ),
     )
-    def test_decode_returns_none_on_invalid_email(self, signature: str) -> None:
-        assert Verification.decode(signature) is None
+    def test_loads_returns_none_when(self, payload: Any) -> None:
+        signature = settings.SIGNING.timed.dumps(payload)
+        assert Verification.loads(signature) is None
 
-    def test_check_returns_false_on_undecodable_signature(self) -> None:
-        assert Verification.check("") is False
+    def test_check_returns_false_when_loads_returns_none(self) -> None:
+        with mock.patch.object(Verification, "loads", autospec=True) as loads:
+            loads.return_value = None
+            result = Verification.check("doesnotmatter")
 
-    def test_check_returns_false_on_signature_email_not_matching_configured_patterns(
-        self,
-    ) -> None:
-        signature = settings.SIGNING.timed.dumps({"email": "mismatch@email.com"})
-        assert Verification.check(signature) is False
+        assert result is False
+        loads.assert_called_once_with("doesnotmatter")

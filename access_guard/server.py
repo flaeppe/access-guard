@@ -184,7 +184,7 @@ async def verify(request: Request) -> Response:
         logger.debug("verify.login_cookie.invalid")
         return response
 
-    login_signature = LoginSignature.decode(request.path_params["signature"])
+    login_signature = LoginSignature.loads(request.path_params["signature"])
     if not login_signature:
         logger.debug("verify.login_signature.invalid")
         return HTMLResponse("", status_code=HTTPStatus.NOT_FOUND)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import abc
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar
 
 from itsdangerous.exc import BadData, SignatureExpired
 from pydantic import BaseModel, Field, validator
@@ -11,6 +11,12 @@ from pydantic.networks import EmailStr
 
 from . import settings
 from .validators import check_email_is_allowed
+
+if TYPE_CHECKING:
+    DecodableParent = BaseModel
+else:
+    DecodableParent = object
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,13 +65,55 @@ class ForwardHeaders(BaseModel):
         return encoded
 
 
-class LoginSignature(BaseModel):
+T = TypeVar("T", bound="Decodable")
+
+
+class Decodable(DecodableParent):
+    MAX_AGE: ClassVar[int]
+
+    @classmethod
+    def decode(cls, signature: str) -> abc.MutableMapping | None:
+        if not signature:
+            return None
+
+        try:
+            loaded = settings.SIGNING.timed.loads(signature, max_age=cls.MAX_AGE)
+        except SignatureExpired as exc:
+            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
+            logger.info("decodable.decode.expired %s", date_signed)
+            return None
+        except BadData:
+            logger.warning("decodable.decode.bad_data", exc_info=True)
+            return None
+
+        if not isinstance(loaded, abc.MutableMapping):
+            # TODO: Log received type (type=type(loaded))
+            logger.error("decodable.decode.payload_type_invalid")
+            return None
+        return loaded
+
+    @classmethod
+    def loads(cls: type[T], signature: str) -> T | None:
+        decoded = cls.decode(signature)
+        if decoded is None:
+            return None
+
+        try:
+            return cls.parse_obj(decoded)
+        except ValidationError:
+            logger.error("decodable.loads.invalid_payload", exc_info=True)
+            return None
+
+
+class LoginSignature(Decodable, BaseModel):
     email: EmailStr
     signature: str
 
     _validate_email = validator("email", allow_reuse=True, always=True)(
         check_email_is_allowed
     )
+
+    MAX_AGE: ClassVar[int] = settings.LOGIN_SIGNATURE_MAX_AGE
 
     @classmethod
     def create(cls, email: str) -> LoginSignature:
@@ -74,62 +122,22 @@ class LoginSignature(BaseModel):
         return cls(email=email, signature=signature)
 
     @classmethod
-    def decode(cls, signature: str) -> LoginSignature | None:
-        # TODO: DRY unsigning for reusage with Verification
-        try:
-            loaded = settings.SIGNING.timed.loads(
-                signature, max_age=settings.LOGIN_SIGNATURE_MAX_AGE
-            )
-        except SignatureExpired as exc:
-            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-            logger.info("login_signature.decode.expired %s", date_signed)
-            return None
-        except BadData:
-            logger.warning("login_signature.decode.bad_data", exc_info=True)
-            return None
-
-        if not isinstance(loaded, abc.MutableMapping):
-            # TODO: Log received type (type=type(loaded))
-            logger.error("login_signature.decode.payload_not_a_mapping")
-            return None
-
-        loaded["signature"] = signature
-        try:
-            return cls.parse_obj(loaded)
-        except ValidationError:
-            logger.error("login_signature.decode.invalid_payload", exc_info=True)
-            return None
+    def decode(cls, signature: str) -> abc.MutableMapping | None:
+        decoded = super().decode(signature)
+        if decoded is not None:
+            decoded["signature"] = signature
+        return decoded
 
 
-class Verification(BaseModel):
+class Verification(Decodable, BaseModel):
     email: EmailStr
 
     _validate_email = validator("email", allow_reuse=True, always=True)(
         check_email_is_allowed
     )
 
-    @classmethod
-    def decode(cls, signature: str) -> Verification | None:
-        if not signature:
-            return None
-
-        # TODO: DRY unsigning for reusage with LoginSignature
-        try:
-            return cls.parse_obj(
-                settings.SIGNING.timed.loads(
-                    signature, max_age=settings.VERIFY_SIGNATURE_MAX_AGE
-                )
-            )
-        except SignatureExpired as exc:
-            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-            logger.debug("verification.decode.signature_expired %s", date_signed)
-        except BadData:
-            logger.warning("verification.decode.bad_data", exc_info=True)
-        except ValidationError:
-            logger.warning("verification.decode.invalid", exc_info=True)
-
-        return None
+    MAX_AGE: ClassVar[int] = settings.VERIFY_SIGNATURE_MAX_AGE
 
     @classmethod
     def check(cls, signature: str) -> bool:
-        return bool(cls.decode(signature))
+        return bool(cls.loads(signature))

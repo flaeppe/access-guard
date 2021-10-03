@@ -439,7 +439,7 @@ class TestVerify:
         self, valid_verification: tuple[LoginSignature, RequestsCookieJar]
     ) -> None:
         login_signature, cookies = valid_verification
-        with mock.patch.object(LoginSignature, "decode", autospec=True) as validate:
+        with mock.patch.object(LoginSignature, "loads", autospec=True) as validate:
             validate.return_value = None
             response = self.api_client.get(
                 self.url(login_signature),
