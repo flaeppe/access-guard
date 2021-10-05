@@ -11,7 +11,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
-from starlette.routing import Route, Mount
+from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import settings
@@ -206,7 +206,11 @@ async def verify(request: Request) -> Response:
 routes = [
     Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
     Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
-    Mount("/static", app=StaticFiles(directory=str(Path(__file__).parent / "static")), name="static"),
+    Mount(
+        "/static",
+        app=StaticFiles(directory=str(Path(__file__).parent / "static")),
+        name="static",
+    ),
 ]
 middleware = [
     Middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS),
