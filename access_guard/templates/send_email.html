@@ -1,9 +1,26 @@
-<html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet"> -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+
+    <title>Send me a link - Access Guard</title>
+  </head>
   <body>
-    <form action="{{ url_for('auth') }}" method="post">
-      <label for="email">Email:</label><br>
-      <input type="text" id="email" name="email"><br>
-      <input type="submit">
-    </form>
+    <div class="container">
+      <div class="card mt-5 mx-auto" style="width: 25rem;">
+        <form action="{{ url_for('auth') }}" method="post" autocomplete="off">
+          <div class="card-body p-5">
+            <h4 class="card-title mt-5">Get a login link by email</h4>
+            <input type="email" class="form-control mt-4" id="email" name="email" placeholder="your@email.com" spellcheck="false" autocapitalize="none" autofocus required>
+            <button type="submit" class="btn btn-primary mt-3">Send that email</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>
