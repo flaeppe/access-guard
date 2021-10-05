@@ -5,6 +5,7 @@ import asyncio
 import logging
 import re
 import sys
+from pathlib import Path
 
 from aiosmtplib.errors import SMTPException
 
@@ -14,13 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 def command(argv: list[str] | None = None) -> None:
-    argv = argv if argv is not None else sys.argv[1:]
-    parser = argparse.ArgumentParser(prog="access-guard", description="...")
+    from access_guard.environ import environ
 
-    parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {__version__}"
+    environ.load(vars(parse_argv(argv if argv is not None else sys.argv[1:])))
+    if not healthcheck():
+        exit(666)
+    start_server()
+
+
+def parse_argv(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="access-guard", description="...")
+    required = parser.add_argument_group(title="Required arguments")
+    email_required = parser.add_argument_group(
+        title="Required email arguments",
+        description="SMTP/Email specific configuration",
     )
-    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
+    email_optional = parser.add_argument_group(
+        title="Optional email arguments",
+        description="SMTP/Email specific configuration",
+    )
+    # Positional arguments
     parser.add_argument(
         "email_patterns",
         metavar="EMAIL_PATTERNS",
@@ -29,9 +43,10 @@ def command(argv: list[str] | None = None) -> None:
         nargs="+",
         help="Email addresses to match, each compiled to a regex",
     )
-    parser.add_argument("-s", "--secret", required=True, type=str, help="Secret key")
+    # Required arguments
+    required.add_argument("-s", "--secret", required=True, type=str, help="Secret key")
     # TODO: Validate auth_host is subdomain of cookie_domain
-    parser.add_argument(
+    required.add_argument(
         "-a",
         "--auth-host",
         required=True,
@@ -52,7 +67,7 @@ def command(argv: list[str] | None = None) -> None:
     #        " requests to access guard"
     #    ),
     # )
-    parser.add_argument(
+    required.add_argument(
         "-c",
         "--cookie-domain",
         required=True,
@@ -63,6 +78,11 @@ def command(argv: list[str] | None = None) -> None:
             " for AUTH_HOST"
         ),
     )
+    # Optional arguments
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     parser.add_argument(
         "--cookie-secure",
         action="store_true",
@@ -91,27 +111,6 @@ def command(argv: list[str] | None = None) -> None:
         ),
     )
     parser.add_argument(
-        "--email-host",
-        required=True,
-        type=str,
-        dest="email_host",
-        help="The host to use for sending emails",
-    )
-    parser.add_argument(
-        "--email-port",
-        required=True,
-        type=int,
-        dest="email_port",
-        help="Port to use for the SMTP server defined in --email-host",
-    )
-    parser.add_argument(
-        "--from-email",
-        required=True,
-        type=str,
-        dest="from_email",
-        help="What will become the sender's address in sent emails",
-    )
-    parser.add_argument(
         "--host",
         type=str,
         default="0.0.0.0",  # nosec
@@ -123,16 +122,86 @@ def command(argv: list[str] | None = None) -> None:
         default=8585,
         help="Server port. [default: 8585]",
     )
+    # Required email arguments
+    email_required.add_argument(
+        "--email-host",
+        required=True,
+        type=str,
+        dest="email_host",
+        help="The host to use for sending emails",
+    )
+    email_required.add_argument(
+        "--email-port",
+        required=True,
+        type=int,
+        dest="email_port",
+        help="Port to use for the SMTP server defined in --email-host",
+    )
+    email_required.add_argument(
+        "--from-email",
+        required=True,
+        type=str,
+        dest="from_email",
+        help="What will become the sender's address in sent emails",
+    )
+    # Optional email arguments
+    email_optional.add_argument(
+        "--email-username",
+        type=str,
+        dest="email_username",
+        default=argparse.SUPPRESS,
+        help="Username to login with on configured SMTP server [default: unset]",
+    )
+    email_optional.add_argument(
+        "--email-password",
+        type=str,
+        dest="email_password",
+        default=argparse.SUPPRESS,
+        help="Password to login with on configured SMTP server [default: unset]",
+    )
+    email_mutex = email_optional.add_mutually_exclusive_group()
+    email_mutex.add_argument(
+        "--email-use-tls",
+        dest="email_use_tls",
+        action="store_true",
+        help=(
+            "Make the _initial_ connection to the SMTP server over TLS/SSL"
+            " [default: false]"
+        ),
+    )
+    email_mutex.add_argument(
+        "--email-start-tls",
+        dest="email_start_tls",
+        action="store_true",
+        help=(
+            "Make the initial connection to the SMTP server over plaintext,"
+            " and then upgrade the connection to TLS/SSL [default: false]"
+        ),
+    )
+    email_optional.add_argument(
+        "--email-validate-certs",
+        dest="email_validate_certs",
+        action="store_false",
+        help="Validate server certificates for SMTP [default: true]",
+    )
+    email_optional.add_argument(
+        "--email-client-cert",
+        type=Path,
+        dest="email_client_cert",
+        default=argparse.SUPPRESS,
+        help="Path to client side certificate, for TLS verification [default: unset]",
+    )
+    email_optional.add_argument(
+        "--email-client-key",
+        type=Path,
+        dest="email_client_key",
+        default=argparse.SUPPRESS,
+        help="Path to client side key, for TLS verification [default: unset]",
+    )
 
     args = parser.parse_args(argv)
     assert args.email_patterns
-
-    from access_guard.environ import environ
-
-    environ.load(vars(args))
-    if not healthcheck():
-        exit(666)
-    start_server()
+    return args
 
 
 class HealthcheckFailed(Exception):

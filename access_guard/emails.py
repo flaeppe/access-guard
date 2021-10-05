@@ -6,14 +6,16 @@ from . import settings
 
 
 def get_connection() -> aiosmtplib.SMTP:
-    # TODO: Login with credentials
     return aiosmtplib.SMTP(
         hostname=settings.EMAIL_HOST,
         port=settings.EMAIL_PORT,
-        # TODO: Support these(?)
-        use_tls=None,
-        start_tls=None,
-        validate_certs=None,
+        username=settings.EMAIL_USERNAME,
+        password=str(settings.EMAIL_PASSWORD) if settings.EMAIL_PASSWORD else None,
+        use_tls=settings.EMAIL_USE_TLS,
+        start_tls=settings.EMAIL_START_TLS,
+        validate_certs=settings.EMAIL_VALIDATE_CERTS,
+        client_cert=settings.EMAIL_CLIENT_CERT,
+        client_key=settings.EMAIL_CLIENT_KEY,
     )
 
 
