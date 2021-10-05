@@ -41,6 +41,7 @@ EMAIL_START_TLS: bool = config("email_start_tls", cast=bool, default=False)
 EMAIL_VALIDATE_CERTS: bool = config("email_validate_certs", cast=bool, default=True)
 EMAIL_CLIENT_CERT: Path | None = config("email_client_cert", cast=Path, default=None)
 EMAIL_CLIENT_KEY: Path | None = config("email_client_key", cast=Path, default=None)
+EMAIL_SUBJECT: str = config("email_subject", cast=str)
 
 HOST: str = config("host", cast=str, default="0.0.0.0")  # nosec
 PORT: int = config("port", cast=int, default=8585)

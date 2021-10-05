@@ -198,6 +198,16 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         default=argparse.SUPPRESS,
         help="Path to client side key, for TLS verification [default: unset]",
     )
+    email_optional.add_argument(
+        "--email-subject",
+        type=str,
+        dest="email_subject",
+        default="Access guard verification",
+        help=(
+            "Subject of the email sent for verification"
+            " [default: Access guard verification]"
+        ),
+    )
 
     args = parser.parse_args(argv)
     assert args.email_patterns

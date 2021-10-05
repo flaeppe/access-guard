@@ -21,6 +21,7 @@ environ.load(  # noqa
         "email_host": "mailhog",
         "email_port": "1025",
         "from_email": "access-guard@local.com",
+        "email_subject": "Test verification",
     }
 )
 

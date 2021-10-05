@@ -49,6 +49,7 @@ def valid_command_args() -> tuple[list[str], dict[str, Any]]:
             "email_use_tls": False,
             "email_start_tls": False,
             "email_validate_certs": True,
+            "email_subject": "Access guard verification",
             "host": "0.0.0.0",
             "port": 8585,
         },
@@ -121,6 +122,7 @@ def test_defaults() -> None:
             "email_use_tls": False,
             "email_start_tls": False,
             "email_validate_certs": True,
+            "email_subject": "Access guard verification",
             "host": "0.0.0.0",
             "port": 8585,
         }

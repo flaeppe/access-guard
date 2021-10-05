@@ -23,8 +23,7 @@ async def send_mail(email: str, link: str) -> None:
     message = EmailMessage()
     message["From"] = settings.FROM_EMAIL
     message["To"] = email
-    # TODO: Make subject come from a settings variable
-    message["Subject"] = "The very secret link"
+    message["Subject"] = settings.EMAIL_SUBJECT
     message.set_content(link)
     async with get_connection() as client:
         assert isinstance(client, aiosmtplib.SMTP)
