@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  sut:
+    image: ${IMAGE_TAG}
+    entrypoint: /bin/bash -c
+    working_dir: "/app"
+    command:
+      - pytest access_guard/
+    stdin_open: true
+    tty: true
