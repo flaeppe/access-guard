@@ -58,6 +58,7 @@ jobs:
         with:
           build-args: |
             BUILD_TARGET=dev
+          load: true
           tags: |
             access-guard:${{ github.sha }}
       - name: Run tests
