@@ -154,37 +154,20 @@ async def auth(request: Request) -> Response:
     return response
 
 
-@check_if_verified
-async def verify(request: Request) -> Response:
-    forward_headers = None
-    try:
-        forward_headers = validate_login_cookie(request)
-    except TamperedLoginCookie:
-        response: Response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-        response.delete_cookie(
-            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
-        )
-        logger.debug("verify.login_cookie.tampered", exc_info=True)
-        return response
+def restart_auth(request: Request) -> RedirectResponse:
+    response = RedirectResponse(
+        url=request.url_for("auth"), status_code=HTTPStatus.SEE_OTHER
+    )
+    response.delete_cookie(settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
+    response.delete_cookie(settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
+    logger.debug("restart_auth")
+    return response
 
-    if not forward_headers:
-        response = RedirectResponse(
-            url=request.url_for("auth"), status_code=HTTPStatus.SEE_OTHER
-        )
-        # No valid login cookie and no valid verification cookie at verify, then we drop
-        # cookies and try to restart from auth
-        response.delete_cookie(
-            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
-        )
-        response.delete_cookie(
-            settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
-        )
-        logger.debug("verify.login_cookie.invalid")
-        return response
 
-    login_signature = LoginSignature.loads(request.path_params["signature"])
+def validate_login(signature: str, forward_headers: ForwardHeaders) -> Response:
+    login_signature = LoginSignature.loads(signature)
     if not login_signature:
-        logger.debug("verify.login_signature.invalid")
+        logger.debug("validate_login.signature_invalid")
         return HTMLResponse("", status_code=HTTPStatus.NOT_FOUND)
 
     response = RedirectResponse(
@@ -202,8 +185,30 @@ async def verify(request: Request) -> Response:
         secure=settings.COOKIE_SECURE,
         httponly=True,
     )
-    logger.info("verify.success")
+    logger.info("validate_login.success")
     return response
+
+
+@check_if_verified
+async def verify(request: Request) -> Response:
+    forward_headers = None
+    try:
+        forward_headers = validate_login_cookie(request)
+    except TamperedLoginCookie:
+        response: Response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
+        response.delete_cookie(
+            settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
+        logger.debug("verify.login_cookie.tampered", exc_info=True)
+        return response
+
+    # If no valid login cookie and no valid verification cookie at verify, then we drop
+    # cookies and try to restart from auth
+    return (
+        validate_login(request.path_params["signature"], forward_headers)
+        if forward_headers
+        else restart_auth(request)
+    )
 
 
 routes = [
