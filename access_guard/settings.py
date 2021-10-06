@@ -24,6 +24,7 @@ def as_regex_patterns(str_patterns: Sequence[Any]) -> Sequence[re.Pattern]:
 EMAIL_PATTERNS: Sequence[re.Pattern] = config("email_patterns", cast=as_regex_patterns)
 SECRET: Secret = config("secret", cast=Secret)
 DOMAIN: str = config("auth_host", cast=str)
+TRUSTED_HOSTS: tuple[str, ...] = config("trusted_hosts", cast=tuple)
 # TODO: AUTH_TOKEN = config("auth_token", cast=Secret)
 COOKIE_DOMAIN: str = config("cookie_domain", cast=str)
 COOKIE_SECURE: bool = config("cookie_secure", cast=bool, default=False)

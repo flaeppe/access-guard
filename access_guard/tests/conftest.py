@@ -14,6 +14,7 @@ environ.load(  # noqa
         "email_patterns": (".*@test.com",),
         "secret": "supersecret",
         "auth_host": "testserver.local",
+        "trusted_hosts": ("testserver.local",),
         "cookie_domain": "testserver.local",
         "cookie_secure": False,
         "login_cookie_name": "login-test",

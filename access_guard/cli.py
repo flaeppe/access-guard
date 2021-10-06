@@ -35,7 +35,7 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
     # Positional arguments
     parser.add_argument(
         "email_patterns",
-        metavar="EMAIL_PATTERNS",
+        metavar="EMAIL_PATTERN",
         # type is expecting a str, while re.compile expects a r"..."
         type=re.compile,  # type: ignore[arg-type]
         nargs="+",
@@ -51,6 +51,19 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         type=str,
         dest="auth_host",
         help="The entrypoint domain name for access guard (without protocol or path)",
+    )
+    required.add_argument(
+        "-t",
+        "--trusted-hosts",
+        required=True,
+        metavar="TRUSTED_HOST",
+        type=str,
+        nargs="+",
+        help=(
+            "Hosts/domain names that access guard should serve. Matched against a"
+            " request's Host header. Wildcard domains such as '*.example.com' are"
+            " supported for matching subdomains. To allow any hostname use: *"
+        ),
     )
     # TODO: Support auth token
     # parser.add_argument(

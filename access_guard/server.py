@@ -8,6 +8,8 @@ from itsdangerous.exc import BadData, SignatureExpired
 from pydantic.error_wrappers import ValidationError
 from starlette.applications import Starlette
 from starlette.background import BackgroundTask
+from starlette.middleware import Middleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.routing import Route
@@ -208,7 +210,10 @@ routes = [
     Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
     Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
 ]
-app = Starlette(routes=routes, debug=settings.DEBUG)
+middleware = [
+    Middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS),
+]
+app = Starlette(routes=routes, middleware=middleware, debug=settings.DEBUG)
 
 
 def run() -> None:

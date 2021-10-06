@@ -1,3 +1,4 @@
+import itertools
 import re
 from contextlib import ExitStack
 from io import StringIO
@@ -25,6 +26,8 @@ def valid_command_args() -> tuple[list[str], dict[str, Any]]:
             "supersecret",
             "--auth-host",
             "valid.local",
+            "--trusted-hosts",
+            "valid.local",
             "--cookie-domain",
             "valid.local",
             "--email-host",
@@ -39,6 +42,7 @@ def valid_command_args() -> tuple[list[str], dict[str, Any]]:
             "email_patterns": [re.compile(r".*")],
             "secret": "supersecret",
             "auth_host": "valid.local",
+            "trusted_hosts": ["valid.local"],
             "cookie_domain": "valid.local",
             "cookie_secure": False,
             "login_cookie_name": "access-guard-forwarded",
@@ -71,16 +75,49 @@ def test_version_from(argv: list[str]) -> None:
     assert "access-guard 0.1" in stdout.getvalue()
 
 
-def test_email_patterns_are_required() -> None:
+@pytest.mark.parametrize(
+    "required_arg,error_msg_match",
+    (
+        pytest.param("email_patterns", "EMAIL_PATTERN", id="email patterns"),
+        pytest.param("--secret", "-s/--secret", id="secret"),
+        pytest.param("--auth-host", "-a/--auth-host", id="auth host"),
+        pytest.param("--trusted-hosts", "-t/--trusted-hosts", id="trusted hosts"),
+        pytest.param("--cookie-domain", "-c/--cookie-domain", id="cookie domain"),
+        pytest.param("--email-host", "--email-host", id="email host"),
+        pytest.param("--email-port", "--email-port", id="email port"),
+        pytest.param("--from-email", "--from-email", id="from email"),
+    ),
+)
+def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
+    required = {
+        "email_patterns": ".*",
+        "--secret": "supersecret",
+        "--auth-host": "valid.local",
+        "--trusted-hosts": "valid.local",
+        "--cookie-domain": "valid.local",
+        "--email-host": "email-host",
+        "--email-port": "666",
+        "--from-email": "webmaster@local.com",
+    }
+    required.pop(required_arg)
     with pytest.raises(
         SystemExit
     ) as cm, mock_run_server as run_server, mock_stderr as stderr:
-        cli.command([])
+        cli.command(
+            list(
+                itertools.chain.from_iterable(
+                    [
+                        ((name, value) if name != "email_patterns" else (value,))
+                        for name, value in required.items()
+                    ]
+                )
+            )
+        )
 
     run_server.assert_not_called()
     assert cm.value.code == 2
     assert (
-        re.search(r".*arguments are required: EMAIL_PATTERNS.*", stderr.getvalue())
+        re.search(rf".*arguments are required: {error_msg_match}.*", stderr.getvalue())
         is not None
     )
 
@@ -93,6 +130,8 @@ def test_defaults() -> None:
                 "--secret",
                 "a secret",
                 "--auth-host",
+                "testing-defaults.local",
+                "--trusted-hosts",
                 "testing-defaults.local",
                 "--cookie-domain",
                 "testing-defaults.local",
@@ -112,6 +151,7 @@ def test_defaults() -> None:
             "email_patterns": [re.compile(r".*@defaults.com")],
             "secret": "a secret",
             "auth_host": "testing-defaults.local",
+            "trusted_hosts": ["testing-defaults.local"],
             "cookie_domain": "testing-defaults.local",
             "cookie_secure": False,
             "login_cookie_name": "access-guard-forwarded",
