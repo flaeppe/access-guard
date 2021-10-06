@@ -19,8 +19,8 @@ environ.load(  # noqa
         "cookie_secure": False,
         "login_cookie_name": "login-test",
         "verified_cookie_name": "verified-test",
-        "email_host": "mailhog",
-        "email_port": "1025",
+        "email_host": "email-host",
+        "email_port": "666",
         "from_email": "access-guard@local.com",
         "email_subject": "Test verification",
     }

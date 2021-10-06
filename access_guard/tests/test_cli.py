@@ -15,6 +15,9 @@ mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=Tru
 mock_run_server = mock.patch("access_guard.server.run", autospec=True)
 mock_smtp_connection = mock.patch("aiosmtplib.SMTP", autospec=True)
 mock_stderr = mock.patch("argparse._sys.stderr", new_callable=StringIO)
+successful_healthcheck = mock.patch(
+    "access_guard.cli.healthcheck", autospec=True, return_value=True
+)
 
 
 @pytest.fixture(scope="session")
@@ -123,7 +126,10 @@ def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
 
 
 def test_defaults() -> None:
-    with mock_run_server as run_server, mock_load_environ as load_environ:
+    with ExitStack() as stack:
+        run_server = stack.enter_context(mock_run_server)
+        load_environ = stack.enter_context(mock_load_environ)
+        stack.enter_context(successful_healthcheck)
         cli.command(
             [
                 ".*@defaults.com",
@@ -188,7 +194,10 @@ def test_email_client_cert_and_key_parsed_as_path(
     valid_command_args: tuple[list[str], dict[str, Any]]
 ) -> None:
     argv, parsed_argv = valid_command_args
-    with mock_run_server as run_server, mock_load_environ as load_environ:
+    with ExitStack() as stack:
+        run_server = stack.enter_context(mock_run_server)
+        load_environ = stack.enter_context(mock_load_environ)
+        stack.enter_context(successful_healthcheck)
         cli.command(
             [
                 *argv,
@@ -240,8 +249,8 @@ class TestHealthcheck:
 
         assert result is True
         smtp_connection.assert_called_once_with(
-            hostname="mailhog",
-            port=1025,
+            hostname="email-host",
+            port=666,
             username=None,
             password=None,
             use_tls=False,
