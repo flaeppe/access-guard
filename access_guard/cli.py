@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 import re
 import sys
 from pathlib import Path
@@ -10,8 +9,7 @@ from pathlib import Path
 from aiosmtplib.errors import SMTPException
 
 from .__version__ import __version__
-
-logger = logging.getLogger(__name__)
+from .log import logger
 
 
 def command(argv: list[str] | None = None) -> None:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from http import HTTPStatus
 from pathlib import Path
 from typing import Awaitable, Callable
@@ -17,11 +16,8 @@ from starlette.templating import Jinja2Templates
 from . import settings
 from .emails import send_mail
 from .forms import SendEmailForm
+from .log import logger
 from .schema import ForwardHeaders, LoginSignature, Verification
-
-logging.basicConfig(level=(logging.DEBUG if settings.DEBUG else logging.INFO))
-logger = logging.getLogger(__name__)
-
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -217,5 +213,16 @@ app = Starlette(routes=routes, debug=settings.DEBUG)
 
 def run() -> None:
     import uvicorn
+    from uvicorn.config import LOGGING_CONFIG
 
-    uvicorn.run(app, host=settings.HOST, port=settings.PORT, proxy_headers=True)
+    LOGGING_CONFIG["loggers"]["access-guard"] = {
+        "handlers": ["default"],
+        "level": "DEBUG" if settings.DEBUG else "INFO",
+    }
+    uvicorn.run(
+        app,
+        host=settings.HOST,
+        port=settings.PORT,
+        proxy_headers=True,
+        log_config=LOGGING_CONFIG,
+    )

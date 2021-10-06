@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from collections import abc
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar
 
@@ -10,15 +9,13 @@ from pydantic.error_wrappers import ValidationError
 from pydantic.networks import EmailStr
 
 from . import settings
+from .log import logger
 from .validators import check_email_is_allowed
 
 if TYPE_CHECKING:
     DecodableParent = BaseModel
 else:
     DecodableParent = object
-
-
-logger = logging.getLogger(__name__)
 
 
 HTTPMethod = Literal[
