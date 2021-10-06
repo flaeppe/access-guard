@@ -448,7 +448,7 @@ class TestVerify:
             )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
-        validate.assert_called_once_with(login_signature.signature)
+        validate.assert_has_calls([mock.call(""), mock.call(login_signature.signature)])
 
     def test_returns_unauthenticated_with_tampered_login_cookie(self) -> None:
         forward_headers = ForwardHeadersFactory.create()

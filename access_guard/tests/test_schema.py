@@ -158,7 +158,9 @@ class TestVerification:
             loads.return_value = {"email": "someone@test.com"}
             result = Verification.loads("doesnotmatter")
 
-        assert result == Verification(email="someone@test.com")
+        assert result == Verification(
+            email="someone@test.com", signature="doesnotmatter"
+        )
         loads.assert_called_once_with(
             "doesnotmatter", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
         )

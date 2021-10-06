@@ -127,13 +127,7 @@ class LoginSignature(Decodable, BaseModel):
         return decoded
 
 
-class Verification(Decodable, BaseModel):
-    email: EmailStr
-
-    _validate_email = validator("email", allow_reuse=True, always=True)(
-        check_email_is_allowed
-    )
-
+class Verification(LoginSignature):
     MAX_AGE: ClassVar[int] = settings.VERIFY_SIGNATURE_MAX_AGE
 
     @classmethod
