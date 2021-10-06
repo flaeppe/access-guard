@@ -58,8 +58,7 @@ class ForwardHeaders(BaseModel):
 
     def encode(self) -> str:
         encoded = settings.SIGNING.timed.dumps(self.serialize())
-        assert isinstance(encoded, str)
-        return encoded
+        return encoded if isinstance(encoded, str) else encoded.decode()
 
 
 T = TypeVar("T", bound="Decodable")
@@ -115,8 +114,10 @@ class LoginSignature(Decodable, BaseModel):
     @classmethod
     def create(cls, email: str) -> LoginSignature:
         signature = settings.SIGNING.timed.dumps({"email": email})
-        assert isinstance(signature, str)
-        return cls(email=email, signature=signature)
+        return cls(
+            email=email,
+            signature=signature if isinstance(signature, str) else signature.decode(),
+        )
 
     @classmethod
     def decode(cls, signature: str) -> abc.MutableMapping | None:

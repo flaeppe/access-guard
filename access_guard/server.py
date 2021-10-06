@@ -175,10 +175,9 @@ def validate_login(signature: str, forward_headers: ForwardHeaders) -> Response:
     )
     response.delete_cookie(settings.LOGIN_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
     value = settings.SIGNING.timed.dumps({"email": login_signature.email})
-    assert isinstance(value, str)
     response.set_cookie(
         key=settings.VERIFIED_COOKIE_NAME,
-        value=value,
+        value=value if isinstance(value, str) else value.decode(),
         max_age=settings.VERIFY_SIGNATURE_MAX_AGE,
         expires=settings.VERIFY_SIGNATURE_MAX_AGE,
         domain=settings.COOKIE_DOMAIN,
