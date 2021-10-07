@@ -64,3 +64,11 @@ jobs:
       - name: Run tests
         run: |
           IMAGE_TAG=access-guard:${{ github.sha }} docker-compose -f docker-compose.ci.yml run sut
+      - name: Report coverage
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
+        uses: 5monkeys/cobertura-action@master
+        with:
+          path: coverage/coverage.xml
+          repo_token: ${{ secrets.CI_PAT }}
+          minimum_coverage: 100
+          show_missing: true
