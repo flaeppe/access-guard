@@ -53,6 +53,10 @@ jobs:
         uses: docker/setup-buildx-action@v1
         with:
           version: v0.6.3
+      - name: Create coverage directory
+        run: |
+          mkdir -p coverage
+          sudo chown -R 7331:7331 coverage
       - name: Build image
         uses: docker/build-push-action@v2
         with:
@@ -64,3 +68,12 @@ jobs:
       - name: Run tests
         run: |
           IMAGE_TAG=access-guard:${{ github.sha }} docker-compose -f docker-compose.ci.yml run sut
+      - name: Report coverage
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
+        uses: 5monkeys/cobertura-action@master
+        with:
+          path: coverage/coverage.xml
+          repo_token: ${{ secrets.CI_PAT }}
+          minimum_coverage: 100
+          fail_below_threshold: true
+          show_missing: true

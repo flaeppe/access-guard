@@ -6,6 +6,10 @@ services:
     entrypoint: /bin/bash -c
     working_dir: "/app"
     command:
-      - pytest access_guard/
+      - pytest --cov-report=xml:/app/coverage/coverage.xml access_guard/
     stdin_open: true
     tty: true
+    environment:
+      COVERAGE_RCFILE: /app/setup.cfg
+    volumes:
+      - ./coverage:/app/coverage
