@@ -98,7 +98,6 @@ class TestAuth:
         assert response.text == ""
         assert_login_cookie_unset(response, settings.DOMAIN)
 
-    # TODO: Parameterize missing any combination of headers
     def test_returns_unauthenticated_when_x_forwarded_headers_missing(self) -> None:
         response = self.api_client.get(self.url)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
