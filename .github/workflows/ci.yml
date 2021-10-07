@@ -75,4 +75,5 @@ jobs:
           path: coverage/coverage.xml
           repo_token: ${{ secrets.CI_PAT }}
           minimum_coverage: 100
+          fail_below_threshold: true
           show_missing: true
