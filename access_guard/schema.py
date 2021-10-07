@@ -45,7 +45,7 @@ class ForwardHeaders(BaseModel):
     def decode(cls, value: str) -> ForwardHeaders:
         # TODO: Set a different max age from cookie (should be longer per default?)
         loaded = settings.SIGNING.timed.loads(
-            value, max_age=settings.LOGIN_COOKIE_MAX_AGE
+            value, max_age=settings.AUTH_COOKIE_MAX_AGE
         )
         return cls.parse_obj(loaded)
 
@@ -105,7 +105,7 @@ class Decodable(DecodableParent):
             return None
 
 
-class LoginSignature(Decodable, BaseModel):
+class AuthSignature(Decodable, BaseModel):
     email: EmailStr
     signature: str
 
@@ -113,10 +113,10 @@ class LoginSignature(Decodable, BaseModel):
         check_email_is_allowed
     )
 
-    MAX_AGE: ClassVar[int] = settings.LOGIN_SIGNATURE_MAX_AGE
+    MAX_AGE: ClassVar[int] = settings.AUTH_SIGNATURE_MAX_AGE
 
     @classmethod
-    def create(cls, email: str) -> LoginSignature:
+    def create(cls, email: str) -> AuthSignature:
         signature = settings.SIGNING.timed.dumps({"email": email})
         return cls(
             email=email,
@@ -131,7 +131,7 @@ class LoginSignature(Decodable, BaseModel):
         return decoded
 
 
-class Verification(LoginSignature):
+class Verification(AuthSignature):
     MAX_AGE: ClassVar[int] = settings.VERIFY_SIGNATURE_MAX_AGE
 
     @classmethod

@@ -104,12 +104,11 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--login-cookie-name",
-        dest="login_cookie_name",
+        "--auth-cookie-name",
+        dest="auth_cookie_name",
         default="access-guard-forwarded",
         help=(
-            "Name for cookie used during verification flow"
-            " [default: access-guard-forwarded]"
+            "Name for cookie used during auth flow [default: access-guard-forwarded]"
         ),
     )
     parser.add_argument(
@@ -117,7 +116,7 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         dest="verified_cookie_name",
         default="access-guard-session",
         help=(
-            "Name for cookie set when verification completed successfully"
+            "Name for cookie set when auth completed successfully"
             " [default: access-guard-session]"
         ),
     )

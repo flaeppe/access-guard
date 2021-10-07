@@ -28,7 +28,7 @@ TRUSTED_HOSTS: tuple[str, ...] = config("trusted_hosts", cast=tuple)
 # TODO: AUTH_TOKEN = config("auth_token", cast=Secret)
 COOKIE_DOMAIN: str = config("cookie_domain", cast=str)
 COOKIE_SECURE: bool = config("cookie_secure", cast=bool, default=False)
-LOGIN_COOKIE_NAME: str = config("login_cookie_name", cast=str)
+AUTH_COOKIE_NAME: str = config("auth_cookie_name", cast=str)
 VERIFIED_COOKIE_NAME: str = config("verified_cookie_name", cast=str)
 
 # Email config
@@ -64,6 +64,6 @@ SIGNING = Signers(
 )
 
 
-LOGIN_COOKIE_MAX_AGE = 60 * 60  # 1 hour
-LOGIN_SIGNATURE_MAX_AGE = 60 * 10  # 10 min
+AUTH_COOKIE_MAX_AGE = 60 * 60  # 1 hour
+AUTH_SIGNATURE_MAX_AGE = 60 * 10  # 10 min
 VERIFY_SIGNATURE_MAX_AGE = 60 * 60 * 24  # 24 hours

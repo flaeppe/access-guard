@@ -17,7 +17,7 @@ environ.load(  # noqa
         "trusted_hosts": ("testserver.local",),
         "cookie_domain": "testserver.local",
         "cookie_secure": False,
-        "login_cookie_name": "login-test",
+        "auth_cookie_name": "auth-test",
         "verified_cookie_name": "verified-test",
         "email_host": "email-host",
         "email_port": "666",
@@ -27,7 +27,7 @@ environ.load(  # noqa
 )
 
 from .. import server, settings  # noqa: E402
-from ..schema import LoginSignature  # noqa: E402
+from ..schema import AuthSignature  # noqa: E402
 from .factories import ForwardHeadersFactory  # noqa: E402
 
 
@@ -40,10 +40,10 @@ async def api_client() -> AsyncGenerator[TestClient, None]:
 
 
 @pytest.fixture(scope="function")
-def login_cookie_set() -> RequestsCookieJar:
+def auth_cookie_set() -> RequestsCookieJar:
     cookie_jar = RequestsCookieJar()
     cookie_jar.set(
-        name=settings.LOGIN_COOKIE_NAME,
+        name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
         domain=settings.DOMAIN,
         secure=False,
@@ -53,10 +53,10 @@ def login_cookie_set() -> RequestsCookieJar:
 
 
 @pytest.fixture(scope="function")
-def expired_login_cookie_set() -> RequestsCookieJar:
+def expired_auth_cookie_set() -> RequestsCookieJar:
     cookie_jar = RequestsCookieJar()
     cookie_jar.set(
-        name=settings.LOGIN_COOKIE_NAME,
+        name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
         domain=settings.DOMAIN,
         expires=-1,
@@ -72,15 +72,15 @@ def auth_url() -> str:
 
 
 @pytest.fixture(scope="function")
-def valid_verification() -> tuple[LoginSignature, RequestsCookieJar]:
+def valid_verification() -> tuple[AuthSignature, RequestsCookieJar]:
     headers = ForwardHeadersFactory.create()
     cookies = RequestsCookieJar()
     cookies.set(
-        name=settings.LOGIN_COOKIE_NAME,
+        name=settings.AUTH_COOKIE_NAME,
         value=headers.encode(),
         domain=settings.DOMAIN,
         secure=False,
         rest={"HttpOnly": True},
     )
-    login_signature = LoginSignature.create(email="someone@test.com")
-    return login_signature, cookies
+    auth_signature = AuthSignature.create(email="someone@test.com")
+    return auth_signature, cookies

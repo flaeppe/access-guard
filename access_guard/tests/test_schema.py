@@ -6,7 +6,7 @@ from itsdangerous.exc import BadData, BadSignature, SignatureExpired
 from pydantic.error_wrappers import ValidationError
 
 from .. import settings
-from ..schema import Decodable, ForwardHeaders, LoginSignature, Verification
+from ..schema import AuthSignature, Decodable, ForwardHeaders, Verification
 from .factories import ForwardHeadersFactory
 
 mock_time_signer_loads = mock.patch.object(
@@ -139,16 +139,16 @@ class TestDecodable:
         assert DecodableClass.decode(value) is None
 
 
-class TestLoginSignature:
-    def test_signing_loads_is_called_with_login_signature_max_age(self):
+class TestAuthSignature:
+    def test_signing_loads_is_called_with_auth_signature_max_age(self):
         signature = "doesnotmatter"
         with mock_time_signer_loads as loads:
             loads.return_value = {"email": "someone@test.com", "signature": signature}
-            result = LoginSignature.loads(signature)
+            result = AuthSignature.loads(signature)
 
-        assert result == LoginSignature(email="someone@test.com", signature=signature)
+        assert result == AuthSignature(email="someone@test.com", signature=signature)
         loads.assert_called_once_with(
-            signature, max_age=settings.LOGIN_SIGNATURE_MAX_AGE
+            signature, max_age=settings.AUTH_SIGNATURE_MAX_AGE
         )
 
     @pytest.mark.parametrize(
@@ -164,7 +164,7 @@ class TestLoginSignature:
     )
     def test_loads_returns_none_when(self, payload: Any) -> None:
         signature = settings.SIGNING.timed.dumps(payload)
-        assert LoginSignature.loads(signature) is None
+        assert AuthSignature.loads(signature) is None
 
 
 class TestVerification:
