@@ -63,4 +63,4 @@ jobs:
             access-guard:${{ github.sha }}
       - name: Run tests
         run: |
-          IMAGE_TAG=access-guard:${{ github.sha }} docker-compose -f docker-compose.test.yml run sut
+          IMAGE_TAG=access-guard:${{ github.sha }} docker-compose -f docker-compose.ci.yml run sut
