@@ -2,7 +2,7 @@
 ######################################
 # Builder step #######################
 ######################################
-ARG BUILD_TARGET=prod
+ARG BUILD_TARGET=release
 FROM python:3.9.7-buster AS builder
 
 # Extra Python environment variables
