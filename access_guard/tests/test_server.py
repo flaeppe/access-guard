@@ -176,7 +176,9 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.OK
         assert response.template.name == "email_sent.html"
-        send_mail.assert_called_once_with(email="someone@test.com", link=mock.ANY)
+        send_mail.assert_called_once_with(
+            email="someone@test.com", link=mock.ANY, host_name="testservice.local"
+        )
         send_mail.call_args.kwargs["link"].startswith(
             f"http://{settings.DOMAIN}/verify/"
         )

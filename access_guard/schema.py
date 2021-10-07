@@ -53,6 +53,10 @@ class ForwardHeaders(BaseModel):
     def url_unparsed(self) -> str:
         return f"{self.proto}://{self.host}{self.uri}"
 
+    @property
+    def host_name(self) -> str:
+        return self.host.split(":")[0]
+
     def serialize(self) -> dict[str, Any]:
         return self.dict(by_alias=True)
 

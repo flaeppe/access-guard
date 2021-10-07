@@ -1,0 +1,5 @@
+Hi,
+
+Use the link below to verify your email for gaining access to {{ requested_service }}
+
+{{ link }}

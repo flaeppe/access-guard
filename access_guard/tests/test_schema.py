@@ -86,6 +86,21 @@ class TestForwardHeaders:
             "x-forwarded-for": forward_headers.source,
         }
 
+    @pytest.mark.parametrize(
+        "value,expected",
+        (
+            pytest.param(
+                "www.some-place.com:1337", "www.some-place.com", id="strips port"
+            ),
+            pytest.param("", "", id="handles empty"),
+            pytest.param(
+                "some-place", "some-place", id="does nothing when no port is specified"
+            ),
+        ),
+    )
+    def test_host_name(self, value: str, expected: str) -> None:
+        assert ForwardHeadersFactory(host=value).host_name == expected
+
 
 class DecodableClass(Decodable):
     MAX_AGE = 666

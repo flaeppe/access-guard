@@ -3,6 +3,7 @@ from email.message import EmailMessage
 import aiosmtplib
 
 from . import settings
+from .templating import templates
 
 
 def get_connection() -> aiosmtplib.SMTP:
@@ -19,12 +20,13 @@ def get_connection() -> aiosmtplib.SMTP:
     )
 
 
-async def send_mail(email: str, link: str) -> None:
+async def send_mail(email: str, link: str, host_name: str) -> None:
     message = EmailMessage()
     message["From"] = settings.FROM_EMAIL
     message["To"] = email
     message["Subject"] = settings.EMAIL_SUBJECT
-    message.set_content(link)
+    template = templates.get_template("verification_email.txt")
+    message.set_content(template.render(link=link, requested_service=host_name))
     async with get_connection() as client:
         assert isinstance(client, aiosmtplib.SMTP)
         await client.send_message(message)

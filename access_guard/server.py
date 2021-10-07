@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from pathlib import Path
 from typing import Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
@@ -13,15 +12,13 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.routing import Route
-from starlette.templating import Jinja2Templates
 
 from . import settings
 from .emails import send_mail
 from .forms import SendEmailForm
 from .log import logger
 from .schema import ForwardHeaders, LoginSignature, Verification
-
-templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+from .templating import templates
 
 
 class TamperedLoginCookie(Exception):
@@ -110,6 +107,7 @@ async def prepare_email_auth(request: Request) -> Response:
                 send_mail,
                 email=login_signature.email,
                 link=request.url_for("verify", signature=login_signature.signature),
+                host_name=forward_headers.host_name,
             )
             logger.debug("auth.send_verification_email")
 
