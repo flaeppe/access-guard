@@ -6,7 +6,7 @@ services:
     entrypoint: /bin/bash -c
     working_dir: "/app"
     command:
-      - coverage run -m pytest access_guard/ && coverage xml -o /app/coverage/coverage.xml
+      - pytest --cov-report=xml:/app/coverage/coverage.xml access_guard/
     stdin_open: true
     tty: true
     environment:
