@@ -1,5 +1,28 @@
+<!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Email sent - Access Guard</title>
+
+    <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet">
+  </head>
   <body>
-    <div>Email has been sent</div>
+    <div class="Container">
+      <div class="AuthBox">
+        <div class="AuthBox-content">
+          <div class="AuthBox-row">
+            <h4 class="AuthBox-title">Email has been sent</h4>
+          </div>
+          <div class="AuthBox-row">
+            <div class="AuthBox-info">
+              Check your inbox to complete verification
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

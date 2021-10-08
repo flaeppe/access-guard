@@ -110,6 +110,9 @@ class TestAuth:
         response = self.api_client.get(self.url, cookies=auth_cookie_set)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.template.name == "send_email.html"
+        assert set(response.context.keys()) == {"request", "host_name"}
+        assert "host_name" in response.context
+        assert response.context["host_name"] == "testservice.local"
         assert "set-cookie" not in response.headers
 
     @pytest.mark.parametrize(
@@ -142,10 +145,11 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.BAD_REQUEST
         assert response.template.name == "send_email.html"
-        assert "errors" in response.context
+        assert set(response.context.keys()) == {"request", "host_name", "errors"}
         assert response.context["errors"] == [
             {"loc": ("email",), "msg": msg, "type": error_code}
         ]
+        assert response.context["host_name"] == "testservice.local"
         send_mail.assert_not_called()
 
     def test_verification_email_is_not_sent_when_email_not_matching_any_pattern(

@@ -98,7 +98,11 @@ async def prepare_email_auth(request: Request) -> Response:
             logger.debug("auth.send_email_form.invalid", exc_info=True)
             return templates.TemplateResponse(
                 "send_email.html",
-                {"request": request, "errors": exc.errors()},
+                {
+                    "request": request,
+                    "host_name": forward_headers.host_name,
+                    "errors": exc.errors(),
+                },
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
@@ -124,7 +128,9 @@ async def prepare_email_auth(request: Request) -> Response:
         # Auth cookie valid and set, refreshing a page should not allow
         # for being authorized
         return templates.TemplateResponse(
-            "send_email.html", {"request": request}, status_code=HTTPStatus.UNAUTHORIZED
+            "send_email.html",
+            {"request": request, "host_name": forward_headers.host_name},
+            status_code=HTTPStatus.UNAUTHORIZED,
         )
 
 

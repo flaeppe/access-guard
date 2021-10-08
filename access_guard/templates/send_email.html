@@ -5,102 +5,9 @@
     <meta name="robots" content="noindex">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Send me a link - Access Guard</title>
+    <title>Verify via email - Access Guard</title>
 
-    <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: Arial, Tahoma, Helvetica, Verdana, sans-serif;
-      padding: 32px 8px;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      background: #000;
-      color: #000;
-      font-size: 1em;
-    }
-
-    label {
-      display: inline-block;
-      margin-bottom: 8px;
-      font-size: 0.9em;
-      font-weight: bold;
-    }
-
-    .Container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-grow: 1;
-    }
-
-    .AuthBox {
-      background: #fff;
-      padding: 16px;
-      width: 280px;
-      max-width: 280px;
-    }
-
-    .AuthBox-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .AuthBox-title {
-      margin-top: 0;
-      font-size: 1.2em;
-      text-align: center;
-    }
-
-    .TextInput, .Button {
-      padding: 16px 12px;
-    }
-
-    .TextInput {
-      width: 100%;
-      background: #fff;
-      color: #000;
-      border: 0;
-      outline: solid 1px #888;
-      outline-offset: -1px;
-    }
-
-    .TextInput:focus {
-      outline-color: #000;
-    }
-
-    .AuthBox-row {
-      margin-top: 8px;
-      width: 100%;
-    }
-
-    .AuthBox > .AuthBox-row:first {
-      margin-top: 0px;
-    }
-
-    .Button {
-      user-select: none;
-      width: 100%;
-      border: 0;
-      background: #007bff;
-      color: #fff;
-    }
-
-    .Button:hover {
-      background: #2e93ff;
-      cursor: pointer;
-    }
-
-    .Button:active {
-      background: #005ec3;
-      cursor: pointer;
-    }
-    </style>
+    <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet">
   </head>
   <body>
     <div class="Container">
@@ -108,10 +15,9 @@
         <form action="{{ url_for('auth') }}" method="post" autocomplete="off">
           <div class="AuthBox-content">
             <div class="AuthBox-row">
-              <h4 class="AuthBox-title">Get a login link by email</h4>
+              <h4 class="AuthBox-title">Verify via email</h4>
             </div>
             <div class="AuthBox-row">
-              <label for="email">Email</label>
               <input
                 class="TextInput"
                 type="email"
@@ -125,12 +31,22 @@
               >
             </div>
             <div class="AuthBox-row">
-              <button
-                class="Button"
-                type="submit"
-              >
-                Send that email
-              </button>
+              <div class="AuthBox-info">
+                You tried to visit <span>{{ host_name }}</span>
+              </div>
+              <div class="AuthBox-info">
+                In order to gain access you have to verify your email
+              </div>
+            </div>
+            <div class="AuthBox-row">
+              <div class="ButtonContainer">
+                <button
+                  class="Button"
+                  type="submit"
+                >
+                  Send email
+                </button>
+              </div>
             </div>
           </div>
         </form>
