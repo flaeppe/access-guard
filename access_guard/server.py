@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+from pathlib import Path
 from typing import Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
