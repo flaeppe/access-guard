@@ -62,6 +62,7 @@ jobs:
         with:
           build-args: |
             BUILD_TARGET=dev
+            SOURCE_COMMIT=${{ github.sha }}
           load: true
           tags: |
             access-guard:${{ github.sha }}
