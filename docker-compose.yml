@@ -57,9 +57,7 @@ services:
       traefik.enable: "true"
       traefik.http.routers.access-guard.rule: "Host(`access-guard.localhost.com`)"
       traefik.http.routers.access-guard.service: "access-guard"
-      traefik.http.middlewares.access-guard.chain.middlewares: "access-guard-auth,access-guard-service"
-      traefik.http.middlewares.access-guard-auth.headers.customrequestheaders.Authorization: "Token secret-token"
-      traefik.http.middlewares.access-guard-service.forwardauth.address: "http://access-guard:8585/auth"
+      traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/auth"
       traefik.http.services.access-guard.loadbalancer.server.port: "8585"
 
   mailhog:
