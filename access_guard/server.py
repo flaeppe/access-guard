@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+from pathlib import Path
 from typing import Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
@@ -11,7 +12,8 @@ from starlette.middleware import Middleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
-from starlette.routing import Route
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
 
 from . import settings
 from .emails import send_mail
@@ -96,7 +98,11 @@ async def prepare_email_auth(request: Request) -> Response:
             logger.debug("auth.send_email_form.invalid", exc_info=True)
             return templates.TemplateResponse(
                 "send_email.html",
-                {"request": request, "errors": exc.errors()},
+                {
+                    "request": request,
+                    "host_name": forward_headers.host_name,
+                    "errors": exc.errors(),
+                },
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
@@ -122,7 +128,9 @@ async def prepare_email_auth(request: Request) -> Response:
         # Auth cookie valid and set, refreshing a page should not allow
         # for being authorized
         return templates.TemplateResponse(
-            "send_email.html", {"request": request}, status_code=HTTPStatus.UNAUTHORIZED
+            "send_email.html",
+            {"request": request, "host_name": forward_headers.host_name},
+            status_code=HTTPStatus.UNAUTHORIZED,
         )
 
 
@@ -205,6 +213,11 @@ async def verify(request: Request) -> Response:
 routes = [
     Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
     Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
+    Mount(
+        "/static",
+        app=StaticFiles(directory=str(Path(__file__).parent / "static")),
+        name="static",
+    ),
 ]
 middleware = [
     Middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS),

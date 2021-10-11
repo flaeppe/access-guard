@@ -1,9 +1,56 @@
-<html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Verify via email - Access Guard</title>
+
+    <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet">
+  </head>
   <body>
-    <form action="{{ url_for('auth') }}" method="post">
-      <label for="email">Email:</label><br>
-      <input type="text" id="email" name="email"><br>
-      <input type="submit">
-    </form>
+    <div class="Container">
+      <div class="AuthBox">
+        <form action="{{ url_for('auth') }}" method="post" autocomplete="off">
+          <div class="AuthBox-content">
+            <div class="AuthBox-row">
+              <h4 class="AuthBox-title">Verify via email</h4>
+            </div>
+            <div class="AuthBox-row">
+              <input
+                class="TextInput"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="your@email.com"
+                spellcheck="false"
+                autocapitalize="none"
+                autofocus
+                required
+              >
+            </div>
+            <div class="AuthBox-row">
+              <div class="AuthBox-info">
+                You tried to visit <span>{{ host_name }}</span>
+              </div>
+              <div class="AuthBox-info">
+                In order to gain access you have to verify your email
+              </div>
+            </div>
+            <div class="AuthBox-row">
+              <div class="ButtonContainer">
+                <button
+                  class="Button"
+                  type="submit"
+                >
+                  Send email
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>

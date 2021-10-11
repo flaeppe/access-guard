@@ -1,0 +1,108 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Tahoma, Helvetica, Verdana, sans-serif;
+  padding: 32px 8px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #000;
+  color: #000;
+  font-size: 1em;
+}
+
+.Container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  margin-bottom: 15%;
+}
+
+.AuthBox {
+  background: #fff;
+  padding: 20px 40px;
+  width: calc(100% - 40px);
+  max-width: 440px;
+}
+
+.AuthBox-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.AuthBox-title {
+  margin-top: 0;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+.AuthBox-info {
+  font-size: 0.8em;
+  color: #777;
+  margin-top: 5px;
+}
+
+.AuthBox-row > .AuthBox-info:first-of-type {
+  margin-top: 0px;
+}
+
+.AuthBox-info span {
+  color: #000;
+}
+
+.AuthBox-row {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.TextInput {
+  width: 100%;
+  background: #fff;
+  color: #000;
+  border-width: 1px;
+  border-top-width: 0px;
+  border-left-width: 0px;
+  border-right-width: 0px;
+  border-style: solid;
+  border-color: #888;
+  margin-bottom: 16px;
+  padding: 16px 12px 1px 12px;
+  padding-left: 0px;
+  font-size: 1.1em;
+}
+
+.TextInput:focus {
+  background: #e1e8ff;
+  outline: none;
+}
+
+.Button {
+  user-select: none;
+  width: 100%;
+  border: 0;
+  background: #007bff;
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 0.9em;
+}
+
+.Button:hover {
+  background: #2e93ff;
+  cursor: pointer;
+}
+
+.Button:active {
+  background: #005ec3;
+  cursor: pointer;
+}
+
+.ButtonContainer {
+  display: inline-block;
+  float: right;
+  padding-top: 20px;
+}
