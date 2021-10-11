@@ -1,6 +1,6 @@
 # Access Guard [![CI](https://github.com/flaeppe/access-guard/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/flaeppe/access-guard/actions/workflows/ci.yml)
 
-A forward authentication service that provides email authentication.
+A forward authentication service that provides email verification.
 
 ## Contents
 
@@ -18,8 +18,8 @@ A forward authentication service that provides email authentication.
 
 ## Prerequisites
 
-Access guard __does not__ ship with an SMTP server. You will have to provide SMTP
-client configuration to allow Access guard to send its verification emails.
+You will need an SMTP server that Access guard can configure its SMTP client
+to send its verification emails.
 
 ## Usage
 
@@ -95,7 +95,7 @@ Optional email arguments:
 
 ## Contributing
 
-A few useful shortcuts/hints to get you started
+All contributions are welcome. Here's a few useful shortcuts/hints to get you started
 
 ### Build image
 
