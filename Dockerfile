@@ -62,7 +62,7 @@ ARG BUILD_TARGET
 ENV ACCESS_GUARD_BUILD_TARGET ${BUILD_TARGET}
 ENV PYTHONPATH="/app/access_guard:${PYTHONPATH}"
 
-# Source sha provided both locally and on Docker Cloud
+# Source sha
 ARG SOURCE_COMMIT
 ENV SOURCE_COMMIT $SOURCE_COMMIT
 
