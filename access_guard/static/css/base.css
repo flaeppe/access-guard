@@ -14,13 +14,6 @@ body {
   font-size: 1em;
 }
 
-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  font-size: 1em;
-  font-weight: bold;
-}
-
 .Container {
   display: flex;
   justify-content: center;
