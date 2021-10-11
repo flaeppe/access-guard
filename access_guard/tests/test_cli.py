@@ -10,6 +10,7 @@ import pytest
 from aiosmtplib.errors import SMTPException
 
 from .. import cli
+from ..__version__ import __version__
 
 mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=True)
 mock_run_server = mock.patch("access_guard.server.run", autospec=True)
@@ -75,7 +76,7 @@ def test_version_from(argv: list[str]) -> None:
 
     run_server.assert_not_called()
     assert cm.value.code == 0
-    assert "access-guard 0.1" in stdout.getvalue()
+    assert f"access-guard {__version__}" in stdout.getvalue()
 
 
 @pytest.mark.parametrize(
