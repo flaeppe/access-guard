@@ -6,7 +6,13 @@ from itsdangerous.exc import BadData, BadSignature, SignatureExpired
 from pydantic.error_wrappers import ValidationError
 
 from .. import settings
-from ..schema import AuthSignature, Decodable, ForwardHeaders, Verification
+from ..schema import (
+    AuthSignature,
+    AuthSignatureExpired,
+    Decodable,
+    ForwardHeaders,
+    Verification,
+)
 from .factories import ForwardHeadersFactory
 
 mock_time_signer_loads = mock.patch.object(
@@ -112,7 +118,6 @@ class TestDecodable:
         (
             pytest.param(BadData("baddata"), id="bad data"),
             pytest.param(BadSignature("badsignature"), id="bad signature"),
-            pytest.param(SignatureExpired("expired"), id="signature expired"),
         ),
     )
     def test_decode_returns_none_when_signer_loads_raises(
@@ -123,6 +128,13 @@ class TestDecodable:
             result = DecodableClass.decode("doesnotmatter")
 
         assert result is None
+        loads.assert_called_once_with("doesnotmatter", max_age=666)
+
+    def test_decode_propagates_signature_expired_error(self):
+        with mock_time_signer_loads as loads, pytest.raises(SignatureExpired):
+            loads.side_effect = SignatureExpired("expired")
+            DecodableClass.decode("doesnotmatter")
+
         loads.assert_called_once_with("doesnotmatter", max_age=666)
 
     @pytest.mark.parametrize(
@@ -141,12 +153,20 @@ class TestDecodable:
 
 class TestAuthSignature:
     def test_signing_loads_is_called_with_auth_signature_max_age(self):
+        forward_headers = ForwardHeadersFactory.create()
         signature = "doesnotmatter"
         with mock_time_signer_loads as loads:
-            loads.return_value = {"email": "someone@test.com", "signature": signature}
+            loads.return_value = {
+                "email": "someone@test.com",
+                "forward_headers": forward_headers.serialize(),
+            }
             result = AuthSignature.loads(signature)
 
-        assert result == AuthSignature(email="someone@test.com", signature=signature)
+        assert result == AuthSignature(
+            email="someone@test.com",
+            signature=signature,
+            forward_headers=forward_headers,
+        )
         loads.assert_called_once_with(
             signature, max_age=settings.AUTH_SIGNATURE_MAX_AGE
         )
@@ -165,6 +185,15 @@ class TestAuthSignature:
     def test_loads_returns_none_when(self, payload: Any) -> None:
         signature = settings.SIGNING.timed.dumps(payload)
         assert AuthSignature.loads(signature) is None
+
+    def test_reraises_signature_expiration_as_auth_signature_expired(self):
+        with mock_time_signer_loads as loads, pytest.raises(AuthSignatureExpired):
+            loads.side_effect = SignatureExpired("expired")
+            AuthSignature.loads("expired signature")
+
+        loads.assert_called_once_with(
+            "expired signature", max_age=settings.AUTH_SIGNATURE_MAX_AGE
+        )
 
 
 class TestVerification:
