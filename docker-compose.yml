@@ -52,6 +52,7 @@ services:
     volumes:
       - ./access_guard:/app/access_guard:cached
       - ./setup.cfg:/app/setup.cfg
+      - ./pyproject.toml:/app/pyproject.toml
       - mypy_cache:/app/.mypy_cache
     labels:
       traefik.enable: "true"

@@ -45,4 +45,4 @@ test:
 
 .PHONY: mypy
 mypy:
-	@$(DOCKER_RUN) mypy --config-file setup.cfg $(mypy)
+	@$(DOCKER_RUN) mypy --config-file pyproject.toml $(mypy)

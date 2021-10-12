@@ -52,7 +52,7 @@ RUN set -x && groupadd -g 7331 app && useradd -r -u 7331 -g app app && \
 # Install source code
 WORKDIR /app
 USER app
-COPY --chown=app setup.cfg ./
+COPY --chown=app setup.cfg pyproject.toml ./
 COPY --from=builder /app/venv venv
 COPY --chown=app access_guard access_guard
 

@@ -6,6 +6,7 @@
 !reqs
 
 !setup.cfg
+!pyproject.toml
 
 # Ignore files nested within included directories
 **/*.pyc
