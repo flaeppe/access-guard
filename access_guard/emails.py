@@ -26,7 +26,13 @@ async def send_mail(email: str, link: str, host_name: str) -> None:
     message["To"] = email
     message["Subject"] = settings.EMAIL_SUBJECT
     template = templates.get_template("verification_email.txt")
-    message.set_content(template.render(link=link, requested_service=host_name))
+    message.set_content(
+        template.render(
+            link=link,
+            requested_service=host_name,
+            link_valid_minutes=settings.AUTH_SIGNATURE_MAX_AGE // 60,
+        )
+    )
     async with get_connection() as client:
         assert isinstance(client, aiosmtplib.SMTP)
         await client.send_message(message)

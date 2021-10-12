@@ -3,3 +3,5 @@ Hi,
 Click on the link below to verify your email for visiting {{ requested_service }}
 
 {{ link }}
+
+The link will expire after {{ link_valid_minutes }} minutes
