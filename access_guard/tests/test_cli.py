@@ -1,4 +1,5 @@
 import itertools
+import os
 import re
 from contextlib import ExitStack
 from io import StringIO
@@ -10,7 +11,6 @@ import pytest
 from aiosmtplib.errors import SMTPException
 
 from .. import cli
-from ..__version__ import __version__
 
 mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=True)
 mock_run_server = mock.patch("access_guard.server.run", autospec=True)
@@ -68,15 +68,23 @@ def valid_command_args() -> tuple[list[str], dict[str, Any]]:
     "argv", (["-V"], ["--version"]), ids=["short name", "long name"]
 )
 def test_version_from(argv: list[str]) -> None:
-    mock_stdout = mock.patch("argparse._sys.stdout", new_callable=StringIO)
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stdout as stdout:
+    version = "0.0.0-test"
+    with ExitStack() as stack:
+        stack.enter_context(
+            mock.patch.dict(
+                os.environ, {"ACCESS_GUARD_BUILD_VERSION": version}, clear=True
+            )
+        )
+        cm = stack.enter_context(pytest.raises(SystemExit))
+        run_server = stack.enter_context(mock_run_server)
+        stdout = stack.enter_context(
+            mock.patch("argparse._sys.stdout", new_callable=StringIO)
+        )
         cli.command(argv)
 
     run_server.assert_not_called()
     assert cm.value.code == 0
-    assert f"access-guard {__version__}" in stdout.getvalue()
+    assert f"access-guard {version}" in stdout.getvalue()
 
 
 @pytest.mark.parametrize(
