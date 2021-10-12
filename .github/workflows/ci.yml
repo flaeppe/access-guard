@@ -42,7 +42,7 @@ jobs:
       - name: Run MyPy
         run: |
           make sync-local-requirements
-          mypy --config-file setup.cfg
+          mypy --config-file pyproject.toml
 
   test:
     name: Test
