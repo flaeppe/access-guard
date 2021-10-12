@@ -32,6 +32,9 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         title="Optional email arguments",
         description="SMTP/Email specific configuration",
     )
+    cookies_optional = parser.add_argument_group(
+        title="Optional cookie arguments", description="Configuration for cookies"
+    )
     # Positional arguments
     parser.add_argument(
         "email_patterns",
@@ -95,32 +98,6 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         "-V", "--version", action="version", version=f"%(prog)s {version}"
     )
     parser.add_argument("-d", "--debug", dest="debug", action="store_true")
-    parser.add_argument(
-        "--cookie-secure",
-        action="store_true",
-        dest="cookie_secure",
-        help=(
-            "Whether to only use secure cookies. When passed, cookies will be marked"
-            " as 'secure' [default: false]"
-        ),
-    )
-    parser.add_argument(
-        "--auth-cookie-name",
-        dest="auth_cookie_name",
-        default="access-guard-forwarded",
-        help=(
-            "Name for cookie used during auth flow [default: access-guard-forwarded]"
-        ),
-    )
-    parser.add_argument(
-        "--verified-cookie-name",
-        dest="verified_cookie_name",
-        default="access-guard-session",
-        help=(
-            "Name for cookie set when auth completed successfully"
-            " [default: access-guard-session]"
-        ),
-    )
     parser.add_argument(
         "--host",
         type=str,
@@ -217,6 +194,62 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         help=(
             "Subject of the email sent for verification"
             " [default: Access guard verification]"
+        ),
+    )
+    # Optional cookie arguments
+    cookies_optional.add_argument(
+        "--cookie-secure",
+        action="store_true",
+        dest="cookie_secure",
+        help=(
+            "Whether to only use secure cookies. When passed, cookies will be marked"
+            " as 'secure' [default: false]"
+        ),
+    )
+    cookies_optional.add_argument(
+        "--auth-cookie-name",
+        dest="auth_cookie_name",
+        default="access-guard-forwarded",
+        help=(
+            "Name for cookie used during auth flow [default: access-guard-forwarded]"
+        ),
+    )
+    cookies_optional.add_argument(
+        "--verified-cookie-name",
+        dest="verified_cookie_name",
+        default="access-guard-session",
+        help=(
+            "Name for cookie set when auth completed successfully"
+            " [default: access-guard-session]"
+        ),
+    )
+    cookies_optional.add_argument(
+        "--auth-cookie-max-age",
+        dest="auth_cookie_max_age",
+        default=argparse.SUPPRESS,
+        help=(
+            "Seconds before the cookie set _during_ auth flow should expire"
+            " [default: 3600 (1 hour)]"
+        ),
+    )
+    cookies_optional.add_argument(
+        "--auth-signature-max-age",
+        dest="auth_signature_max_age",
+        default=argparse.SUPPRESS,
+        help=(
+            "Decides how many seconds a verification email should be valid. When"
+            " the amount of seconds has passed, the client has to request a new email."
+            " [default: 600 (10 minutes)]"
+        ),
+    )
+    cookies_optional.add_argument(
+        "--verify-signature-max-age",
+        dest="verify_signature_max_age",
+        default=argparse.SUPPRESS,
+        help=(
+            "Decides how many seconds a verified session cookie should be valid. When"
+            " the amount of seconds has passed, the client has to verify again."
+            " [default: 86400 (24 hours)]"
         ),
     )
 

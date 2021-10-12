@@ -64,6 +64,13 @@ SIGNING = Signers(
 )
 
 
-AUTH_COOKIE_MAX_AGE = 60 * 60  # 1 hour
-AUTH_SIGNATURE_MAX_AGE = 60 * 10  # 10 min
-VERIFY_SIGNATURE_MAX_AGE = 60 * 60 * 24  # 24 hours
+# Default: 1 hour
+AUTH_COOKIE_MAX_AGE: int = config("auth_cookie_max_age", cast=int, default=60 * 60)
+# Default: 10 min
+AUTH_SIGNATURE_MAX_AGE: int = config(
+    "auth_signature_max_age", cast=int, default=60 * 10
+)
+# Default: 24 hours
+VERIFY_SIGNATURE_MAX_AGE: int = config(
+    "verify_signature_max_age", cast=int, default=60 * 60 * 24
+)
