@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import re
 import sys
 from pathlib import Path
 
 from aiosmtplib.errors import SMTPException
 
-from .__version__ import __version__
 from .log import logger
 
 
@@ -90,8 +90,9 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         ),
     )
     # Optional arguments
+    version = os.environ.get("ACCESS_GUARD_BUILD_VERSION") or "N/A"
     parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {__version__}"
+        "-V", "--version", action="version", version=f"%(prog)s {version}"
     )
     parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     parser.add_argument(
