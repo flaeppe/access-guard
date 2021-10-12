@@ -13,8 +13,8 @@ environ.load(  # noqa
     {
         "email_patterns": (".*@test.com",),
         "secret": "supersecret",
-        "auth_host": "testserver.local",
-        "trusted_hosts": ("testserver.local",),
+        "auth_host": "auth.testserver.local",
+        "trusted_hosts": ("auth.testserver.local",),
         "cookie_domain": "testserver.local",
         "cookie_secure": False,
         "auth_cookie_name": "auth-test",
@@ -45,7 +45,7 @@ def auth_cookie_set() -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
-        domain=settings.DOMAIN,
+        domain=settings.COOKIE_DOMAIN,
         secure=False,
         rest={"HttpOnly": True},
     )
@@ -58,7 +58,7 @@ def expired_auth_cookie_set() -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
-        domain=settings.DOMAIN,
+        domain=settings.COOKIE_DOMAIN,
         expires=-1,
         secure=False,
         rest={"HttpOnly": True},
@@ -72,15 +72,7 @@ def auth_url() -> str:
 
 
 @pytest.fixture(scope="function")
-def valid_verification() -> tuple[AuthSignature, RequestsCookieJar]:
-    headers = ForwardHeadersFactory.create()
-    cookies = RequestsCookieJar()
-    cookies.set(
-        name=settings.AUTH_COOKIE_NAME,
-        value=headers.encode(),
-        domain=settings.DOMAIN,
-        secure=False,
-        rest={"HttpOnly": True},
+def valid_auth_signature() -> AuthSignature:
+    return AuthSignature.create(
+        email="someone@test.com", forward_headers=ForwardHeadersFactory.create()
     )
-    auth_signature = AuthSignature.create(email="someone@test.com")
-    return auth_signature, cookies

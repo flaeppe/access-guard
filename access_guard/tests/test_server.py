@@ -74,14 +74,14 @@ class TestAuth:
         )
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"https://{settings.DOMAIN}/auth"
-        assert_valid_auth_cookie(response, forward_headers, settings.DOMAIN)
+        assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
     def test_returns_success_with_valid_verification_cookie(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -89,20 +89,20 @@ class TestAuth:
         cookie_jar.set(
             name=settings.AUTH_COOKIE_NAME,
             value="something",
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
         response = self.api_client.get(self.url, cookies=cookie_jar)
         assert response.status_code == HTTPStatus.OK
         assert response.text == ""
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_returns_unauthenticated_when_x_forwarded_headers_missing(self) -> None:
         response = self.api_client.get(self.url)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.text == ""
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_renders_auth_form_on_get_when_auth_cookie_is_valid(
         self, auth_cookie_set: RequestsCookieJar
@@ -151,6 +151,8 @@ class TestAuth:
         ]
         assert response.context["host_name"] == "testservice.local"
         send_mail.assert_not_called()
+        # Should not do anything with auth cookie
+        assert settings.AUTH_COOKIE_NAME not in get_cookies(response)
 
     def test_verification_email_is_not_sent_when_email_not_matching_any_pattern(
         self, auth_cookie_set: RequestsCookieJar
@@ -166,6 +168,7 @@ class TestAuth:
         assert response.status_code == HTTPStatus.OK
         assert response.template.name == "email_sent.html"
         send_mail.assert_not_called()
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_sends_verification_email_when_email_matching_pattern(
         self, auth_cookie_set: RequestsCookieJar
@@ -186,6 +189,7 @@ class TestAuth:
         send_mail.call_args.kwargs["link"].startswith(
             f"http://{settings.DOMAIN}/verify/"
         )
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_returns_unauthenticated_with_tampered_auth_cookie(self) -> None:
         forward_headers = ForwardHeadersFactory.create()
@@ -194,7 +198,7 @@ class TestAuth:
         cookies.set(
             name=settings.AUTH_COOKIE_NAME,
             value=signature[1:],
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -205,7 +209,7 @@ class TestAuth:
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_can_reset_cookie_expired_auth_cookie_when_forwarded_headers_exists(
         self,
@@ -220,7 +224,7 @@ class TestAuth:
         )
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert_valid_auth_cookie(response, forward_headers, settings.DOMAIN)
+        assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
     def test_can_reset_signature_expired_auth_cookie_when_forward_headers_exists(
         self, auth_cookie_set: RequestsCookieJar
@@ -237,7 +241,7 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert_valid_auth_cookie(response, forward_headers, settings.DOMAIN)
+        assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
             auth_cookie_set[settings.AUTH_COOKIE_NAME], max_age=60 * 60
         )
@@ -251,7 +255,7 @@ class TestAuth:
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_deletes_signature_expired_auth_cookie_when_forward_headers_are_missing(
         self, auth_cookie_set: RequestsCookieJar
@@ -265,7 +269,7 @@ class TestAuth:
             )
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
             auth_cookie_set[settings.AUTH_COOKIE_NAME],
             max_age=settings.AUTH_COOKIE_MAX_AGE,
@@ -280,7 +284,7 @@ class TestAuth:
         cookies.set(
             name=settings.AUTH_COOKIE_NAME,
             value=forward_headers.encode(),
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -304,9 +308,9 @@ class TestAuth:
         session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
         assert isinstance(session_value, str)
         request_cookies.set(
-            name="verified-test",
+            name=settings.VERIFIED_COOKIE_NAME,
             value=session_value,
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -326,13 +330,8 @@ class TestAuth:
         loads.assert_called_once_with(
             session_value, max_age=settings.VERIFY_SIGNATURE_MAX_AGE
         )
-        cookies = get_cookies(response)
-        assert set(cookies.keys()) == {
-            settings.VERIFIED_COOKIE_NAME,
-            settings.AUTH_COOKIE_NAME,
-        }
-        assert cookies[settings.VERIFIED_COOKIE_NAME].value == ""
-        assert_valid_auth_cookie(response, forward_headers, settings.DOMAIN)
+        assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
+        assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
     def test_ignores_tampered_verification_cookie(self) -> None:
         session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
@@ -341,7 +340,7 @@ class TestAuth:
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value=session_value[1:],
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -350,14 +349,14 @@ class TestAuth:
         )
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.text == ""
-        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_handles_verification_cookie_with_bad_data(self) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value="baddata",
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -369,17 +368,19 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.text == ""
-        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
             "baddata", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
         )
 
-    def test_verified_with_email_not_matching_patterns_conf_returns_unauthorized(self):
+    def test_verified_with_disallowed_email_missing_forward_headers_is_unauthorized(
+        self,
+    ):
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -389,8 +390,8 @@ class TestAuth:
         )
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_verification_cookie_unset(response, settings.DOMAIN)
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
 
 class TestVerify:
@@ -415,19 +416,11 @@ class TestVerify:
 
     def test_can_verify(self) -> None:
         headers = ForwardHeadersFactory.create()
-        request_cookies = RequestsCookieJar()
-        request_cookies.set(
-            name=settings.AUTH_COOKIE_NAME,
-            value=headers.encode(),
-            domain=settings.DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
+        auth_signature = AuthSignature.create(
+            email="someone@test.com", forward_headers=headers
         )
-        auth_signature = AuthSignature.create(email="someone@test.com")
 
-        response = self.api_client.get(
-            self.url(auth_signature), cookies=request_cookies, allow_redirects=False
-        )
+        response = self.api_client.get(self.url(auth_signature), allow_redirects=False)
 
         assert response.status_code == HTTPStatus.FOUND
         assert response.headers["location"] == (
@@ -438,105 +431,59 @@ class TestVerify:
         assert settings.SIGNING.timed.loads(
             cookies[settings.VERIFIED_COOKIE_NAME].value
         ) == {"email": "someone@test.com"}
-        assert_auth_cookie_unset(response, settings.DOMAIN)
 
     def test_returns_not_found_when_signature_validation_returns_none(
-        self, valid_verification: tuple[AuthSignature, RequestsCookieJar]
+        self, valid_auth_signature: AuthSignature
     ) -> None:
-        auth_signature, cookies = valid_verification
         with mock.patch.object(AuthSignature, "loads", autospec=True) as validate:
             validate.return_value = None
             response = self.api_client.get(
-                self.url(auth_signature),
-                cookies=cookies,
+                self.url(valid_auth_signature),
                 allow_redirects=False,
             )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
-        validate.assert_has_calls([mock.call(""), mock.call(auth_signature.signature)])
+        validate.assert_called_once_with(valid_auth_signature.signature)
 
-    def test_returns_unauthenticated_with_tampered_auth_cookie(self) -> None:
-        forward_headers = ForwardHeadersFactory.create()
-        signature = forward_headers.encode()
-        cookies = RequestsCookieJar()
-        cookies.set(
-            name=settings.AUTH_COOKIE_NAME,
-            value=signature[1:],
-            domain=settings.DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
-        )
-        response = self.api_client.get(
-            self.url("doesnotmatter"),
-            headers=forward_headers.serialize(),
-            cookies=cookies,
-            allow_redirects=False,
-        )
-        assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.DOMAIN)
-
-    def test_redirects_to_auth_on_cookie_expired_auth_cookie(
-        self, expired_auth_cookie_set: RequestsCookieJar
-    ) -> None:
-        response = self.api_client.get(
-            self.url("doesnotmatter"),
-            cookies=expired_auth_cookie_set,
-            allow_redirects=False,
-        )
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert_auth_cookie_unset(response, settings.DOMAIN)
-        assert_verification_cookie_unset(response, settings.DOMAIN)
-
-    def test_redirects_to_auth_on_signature_expired_auth_cookie(
-        self, auth_cookie_set: RequestsCookieJar
+    def test_redirects_to_auth_on_expired_auth_signature(
+        self, valid_auth_signature: AuthSignature
     ) -> None:
         with mock_time_signer_loads as loads:
             loads.side_effect = SignatureExpired("expired")
             response = self.api_client.get(
-                self.url("doesnotmatter"),
-                cookies=auth_cookie_set,
-                allow_redirects=False,
+                self.url(valid_auth_signature), allow_redirects=False
             )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
         assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert_auth_cookie_unset(response, settings.DOMAIN)
-        assert_verification_cookie_unset(response, settings.DOMAIN)
-        loads.assert_called_once_with(
-            auth_cookie_set[settings.AUTH_COOKIE_NAME], max_age=60 * 60
-        )
 
     def test_returns_success_with_valid_verification_cookie(self) -> None:
+        forward_headers = ForwardHeadersFactory.create()
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
-            value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
-            domain=settings.DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
-        )
-        # Set a auth cookie and see that it's removed
-        cookie_jar.set(
-            name=settings.AUTH_COOKIE_NAME,
-            value="something",
-            domain=settings.DOMAIN,
+            value=settings.SIGNING.timed.dumps(
+                {
+                    "email": "verified@test.com",
+                    "forward_headers": forward_headers.serialize(),
+                }
+            ),
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
         response = self.api_client.get(self.url("notasignature"), cookies=cookie_jar)
         assert response.status_code == HTTPStatus.OK
         assert response.text == ""
-        assert_auth_cookie_unset(response, settings.DOMAIN)
 
-    def test_ignores_tampered_verification_cookie(self) -> None:
+    def test_returns_not_found_with_tampered_verification_cookie(self) -> None:
         session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
         assert isinstance(session_value, str)
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value=session_value[1:],
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -545,18 +492,16 @@ class TestVerify:
             cookies=cookie_jar,
             allow_redirects=False,
         )
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert response.text == ""
-        assert_auth_cookie_unset(response, settings.DOMAIN)
-        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert response.status_code == HTTPStatus.NOT_FOUND
 
-    def test_handles_verification_cookie_with_bad_data(self) -> None:
+    def test_verification_cookie_with_bad_data_and_invalid_url_results_in_not_found(
+        self,
+    ) -> None:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value="baddata",
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
@@ -565,12 +510,7 @@ class TestVerify:
             cookies=cookie_jar,
             allow_redirects=False,
         )
-
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert response.text == ""
-        assert_auth_cookie_unset(response, settings.DOMAIN)
-        assert_verification_cookie_unset(response, settings.DOMAIN)
+        assert response.status_code == HTTPStatus.NOT_FOUND
 
     @pytest.mark.parametrize(
         "path_param",
@@ -596,23 +536,18 @@ class TestVerify:
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert response.text == ""
 
-    def test_verified_with_email_not_matching_patterns_conf_redirects_to_auth(self):
+    def test_verified_with_disallowed_email_on_invalid_url_returns_not_found(self):
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
             value=settings.SIGNING.timed.dumps({"email": "non-matching@email.com"}),
-            domain=settings.DOMAIN,
+            domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
         )
-
         response = self.api_client.get(
             self.url("signature"),
             cookies=cookie_jar,
             allow_redirects=False,
         )
-
-        assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
-        assert_verification_cookie_unset(response, settings.DOMAIN)
-        assert_auth_cookie_unset(response, settings.DOMAIN)
+        assert response.status_code == HTTPStatus.NOT_FOUND

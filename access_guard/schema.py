@@ -76,12 +76,11 @@ class Decodable(DecodableParent):
         if not signature:
             return None
 
+        # Propagate expiration exception upwards, but no other bad signature
         try:
             loaded = settings.SIGNING.timed.loads(signature, max_age=cls.MAX_AGE)
-        except SignatureExpired as exc:
-            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-            logger.info("decodable.decode.expired %s", date_signed)
-            return None
+        except SignatureExpired:
+            raise
         except BadData:
             logger.warning("decodable.decode.bad_data", exc_info=True)
             return None
@@ -105,9 +104,14 @@ class Decodable(DecodableParent):
             return None
 
 
+class AuthSignatureExpired(Exception):
+    ...
+
+
 class AuthSignature(Decodable, BaseModel):
     email: EmailStr
     signature: str
+    forward_headers: ForwardHeaders
 
     _validate_email = validator("email", allow_reuse=True, always=True)(
         check_email_is_allowed
@@ -116,24 +120,42 @@ class AuthSignature(Decodable, BaseModel):
     MAX_AGE: ClassVar[int] = settings.AUTH_SIGNATURE_MAX_AGE
 
     @classmethod
-    def create(cls, email: str) -> AuthSignature:
-        signature = settings.SIGNING.timed.dumps({"email": email})
+    def create(cls, email: str, forward_headers: ForwardHeaders) -> AuthSignature:
+        signature = settings.SIGNING.timed.dumps(
+            {"email": email, "forward_headers": forward_headers.serialize()}
+        )
         return cls(
             email=email,
+            forward_headers=forward_headers,
             signature=signature if isinstance(signature, str) else signature.decode(),
         )
 
     @classmethod
     def decode(cls, signature: str) -> abc.MutableMapping | None:
-        decoded = super().decode(signature)
+        try:
+            decoded = super().decode(signature)
+        except SignatureExpired as exc:
+            date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
+            logger.info("auth_signature.decode.expired %s", date_signed)
+            raise AuthSignatureExpired from exc
+
         if decoded is not None:
             decoded["signature"] = signature
         return decoded
 
 
-class Verification(AuthSignature):
+class Verification(Decodable, BaseModel):
+    email: EmailStr
+
+    _validate_email = validator("email", allow_reuse=True, always=True)(
+        check_email_is_allowed
+    )
+
     MAX_AGE: ClassVar[int] = settings.VERIFY_SIGNATURE_MAX_AGE
 
     @classmethod
     def check(cls, signature: str) -> bool:
-        return bool(cls.loads(signature))
+        try:
+            return bool(cls.loads(signature))
+        except SignatureExpired:
+            return False
