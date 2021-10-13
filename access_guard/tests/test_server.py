@@ -170,13 +170,21 @@ class TestAuth:
         send_mail.assert_not_called()
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
-    def test_sends_verification_email_when_email_matching_pattern(
-        self, auth_cookie_set: RequestsCookieJar
+    @pytest.mark.parametrize(
+        "email",
+        (
+            pytest.param("sOmeOne@TeSt.CoM", id="mixed case"),
+            pytest.param("someone@test.com", id="all lowercase"),
+            pytest.param("SOMEONE@TEST.COM", id="all uppercase"),
+        ),
+    )
+    def test_sends_verification_email_when_matching_pattern_as(
+        self, email: str, auth_cookie_set: RequestsCookieJar
     ) -> None:
         with mock_send_mail as send_mail:
             response = self.api_client.post(
                 self.url,
-                data={"email": "someone@test.com"},
+                data={"email": email},
                 cookies=auth_cookie_set,
                 allow_redirects=False,
             )
@@ -184,7 +192,7 @@ class TestAuth:
         assert response.status_code == HTTPStatus.OK
         assert response.template.name == "email_sent.html"
         send_mail.assert_called_once_with(
-            email="someone@test.com", link=mock.ANY, host_name="testservice.local"
+            email=email.lower(), link=mock.ANY, host_name="testservice.local"
         )
         send_mail.call_args.kwargs["link"].startswith(
             f"http://{settings.DOMAIN}/verify/"
