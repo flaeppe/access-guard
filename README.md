@@ -113,9 +113,9 @@ Optional cookie arguments:
 - `EMAIL_PATTERN [EMAIL_PATTERN ...]` (positional)
 
   Email address patterns to match for being allowed possibility to verify and access.
-  
+
   Example:
-  
+
   ```
   *@email.com someone@else.com
   ```
@@ -128,9 +128,9 @@ Optional cookie arguments:
 
   The configured domain name for the access guard service, without protocol or path. The service
   wants to know this to redirect unverified clients in to the verification flow.
-  
+
   Example:
-  
+
   ```
   --auth-host auth.localhost.com
   ```
@@ -140,21 +140,21 @@ Optional cookie arguments:
   Hosts/domain names that access guard should serve. Matched against a requests's `Host` header.
   Wildcard domains are supported for matching subdomains. Remember that for usage with docker
   and traefik, the _name_ of the access guard service should be a trusted host.
-  
+
   Examples:
 
   ```
   --trusted-hosts access-guard auth.localhost.com
   ```
-  
+
   To allow multiple subdomains:
-  
+
   ```
   --trusted-hosts *.localhost.com
   ```
-  
+
   To allow any hostname use:
-  
+
   ```
   --trusted-hosts *
   ```
