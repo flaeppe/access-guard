@@ -8,6 +8,9 @@ A forward authentication service that provides email verification.
 - [Usage](#usage)
   - [traefik](#traefik)
   - [Command line arguments](#command-line-arguments)
+  - [Arguments reference](#arguments-reference)
+    - [Required arguments](#required-arguments)
+    - [Optional arguments](#optional-arguments)
 - [Contributing](#contributing)
   - [Build image](#build-image)
   - [Running tests](#running-tests)
@@ -32,9 +35,9 @@ to see a configuration example with [traefik's forward auth](https://doc.traefik
 
 ```console
 $ docker run --rm ghcr.io/flaeppe/access-guard:latest --help
-usage: access-guard [-h] -s SECRET -a AUTH_HOST -t TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d] [--cookie-secure] [--auth-cookie-name AUTH_COOKIE_NAME] [--verified-cookie-name VERIFIED_COOKIE_NAME] [--host HOST] [--port PORT] --email-host EMAIL_HOST
-                    --email-port EMAIL_PORT --from-email FROM_EMAIL [--email-username EMAIL_USERNAME] [--email-password EMAIL_PASSWORD] [--email-use-tls | --email-start-tls] [--email-validate-certs] [--email-client-cert EMAIL_CLIENT_CERT]
-                    [--email-client-key EMAIL_CLIENT_KEY] [--email-subject EMAIL_SUBJECT]
+usage: access-guard [-h] -s SECRET -a AUTH_HOST -t TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d] [--host HOST] [--port PORT] --email-host EMAIL_HOST --email-port EMAIL_PORT --from-email FROM_EMAIL [--email-username EMAIL_USERNAME]
+                    [--email-password EMAIL_PASSWORD] [--email-use-tls | --email-start-tls] [--email-validate-certs] [--email-client-cert EMAIL_CLIENT_CERT] [--email-client-key EMAIL_CLIENT_KEY] [--email-subject EMAIL_SUBJECT] [--cookie-secure]
+                    [--auth-cookie-name AUTH_COOKIE_NAME] [--verified-cookie-name VERIFIED_COOKIE_NAME] [--auth-cookie-max-age AUTH_COOKIE_MAX_AGE] [--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE] [--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE]
                     EMAIL_PATTERN [EMAIL_PATTERN ...]
 
 ...
@@ -46,11 +49,6 @@ optional arguments:
   -h, --help            show this help message and exit
   -V, --version         show program's version number and exit
   -d, --debug
-  --cookie-secure       Whether to only use secure cookies. When passed, cookies will be marked as 'secure' [default: false]
-  --auth-cookie-name AUTH_COOKIE_NAME
-                        Name for cookie used during auth flow [default: access-guard-forwarded]
-  --verified-cookie-name VERIFIED_COOKIE_NAME
-                        Name for cookie set when auth completed successfully [default: access-guard-session]
   --host HOST           Server host. [default: 0.0.0.0]
   --port PORT           Server port. [default: 8585]
 
@@ -91,7 +89,110 @@ Optional email arguments:
                         Path to client side key, for TLS verification [default: unset]
   --email-subject EMAIL_SUBJECT
                         Subject of the email sent for verification [default: Access guard verification]
+
+Optional cookie arguments:
+  Configuration for cookies
+
+  --cookie-secure       Whether to only use secure cookies. When passed, cookies will be marked as 'secure' [default: false]
+  --auth-cookie-name AUTH_COOKIE_NAME
+                        Name for cookie used during auth flow [default: access-guard-forwarded]
+  --verified-cookie-name VERIFIED_COOKIE_NAME
+                        Name for cookie set when auth completed successfully [default: access-guard-session]
+  --auth-cookie-max-age AUTH_COOKIE_MAX_AGE
+                        Seconds before the cookie set _during_ auth flow should expire [default: 3600 (1 hour)]
+  --auth-signature-max-age AUTH_SIGNATURE_MAX_AGE
+                        Decides how many seconds a verification email should be valid. When the amount of seconds has passed, the client has to request a new email. [default: 600 (10 minutes)]
+  --verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE
+                        Decides how many seconds a verified session cookie should be valid. When the amount of seconds has passed, the client has to verify again. [default: 86400 (24 hours)]
 ```
+
+### Arguments reference
+
+#### Required arguments:
+
+- `EMAIL_PATTERN [EMAIL_PATTERN ...]` (positional)
+
+  Email address patterns to match for being allowed possibility to verify and access.
+  
+  Example:
+  
+  ```
+  *@email.com someone@else.com
+  ```
+
+- `-s/--secret SECRET`
+
+  Should be set to a unique, unpredictable value. Is used for cryptographic signing.
+
+- `-a/--auth-host AUTH_HOST`
+
+  The configured domain name for the access guard service, without protocol or path. The service
+  wants to know this to redirect unverified clients in to the verification flow.
+  
+  Example:
+  
+  ```
+  --auth-host auth.localhost.com
+  ```
+
+- `-t/--trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]`
+
+  Hosts/domain names that access guard should serve. Matched against a requests's `Host` header.
+  Wildcard domains are supported for matching subdomains. Remember that for usage with docker
+  and traefik, the _name_ of the access guard service should be a trusted host.
+  
+  Examples:
+
+  ```
+  --trusted-hosts access-guard auth.localhost.com
+  ```
+  
+  To allow multiple subdomains:
+  
+  ```
+  --trusted-hosts *.localhost.com
+  ```
+  
+  To allow any hostname use:
+  
+  ```
+  --trusted-hosts *
+  ```
+
+- `-c/--cookie-domain COOKIE_DOMAIN`
+
+  The domain to use for cookies. Ensure this value covers domain set for `--auth-host`
+
+- `--email-host EMAIL_HOST`
+
+  The host to use for sending of emails
+
+- `--email-port EMAIL_PORT`
+
+  Port to use for the SMTP server defined in `--email-host`
+
+- `--from-email FROM_EMAIL`
+
+  What will become the sender's address in sent emails.
+
+#### Optional arguments:
+
+- `--host HOST`
+- `--port PORT`
+- `--email-username EMAIL_USERNAME`
+- `--email-password EMAIL_PASSWORD`
+- `--email-use-tls`
+- `--email-start-tls`
+- `--email-validate-certs`
+- `--email-client-cert EMAIL_CLIENT_CERT`
+- `--email-client-key EMAIL_CLIENT_KEY`
+- `--email-subject EMAIL_SUBJECT`
+- `--cookie-secure`
+- `--auth-cookie-name AUTH_COOKIE_NAME`
+- `--verified-cookie-name VERIFIED_COOKIE_NAME`
+- `--auth-cookie-max-age AUTH_COOKIE_MAX_AGE`
+- `--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE`
+- `--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE`
 
 ## Contributing
 
