@@ -139,7 +139,13 @@ Optional cookie arguments:
 
   Hosts/domain names that access guard should serve. Matched against a requests's `Host` header.
   Wildcard domains are supported for matching subdomains. Remember that for usage with docker
-  and traefik, the _name_ of the access guard service should be a trusted host.
+  and traefik, the _name_ of the access guard service could be a trusted host. That'll allow
+  the `forwardauth` middleware to configure an address resolved via a docker network.
+  For example (via label/docker configuration):
+
+  ```
+  traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/auth"
+  ```
 
   Examples:
 
@@ -153,7 +159,7 @@ Optional cookie arguments:
   --trusted-hosts *.localhost.com
   ```
 
-  To allow any hostname use:
+  To allow any hostname, use:
 
   ```
   --trusted-hosts *
@@ -161,38 +167,81 @@ Optional cookie arguments:
 
 - `-c/--cookie-domain COOKIE_DOMAIN`
 
-  The domain to use for cookies. Ensure this value covers domain set for `--auth-host`
+  The domain to use for cookies. Ensure this value covers domain set for `--auth-host`.
+
+  With an auth host configuration of:
+
+  ```
+  --auth-host auth.localhost.com
+  ```
+
+  We can set a cookie domain configuration like
+
+  ```
+  --cookie-domain localhost.com
+  ```
+
+  That'll allow a verification cookie to follow along to protected services like:
+
+  ```
+  service_1.localhost.com
+  service_2.localhost.com
+  ```
 
 - `--email-host EMAIL_HOST`
 
   The host to use for sending of emails
 
+  Example:
+
+  ```
+  --email-host 172.18.0.1
+  ```
+
 - `--email-port EMAIL_PORT`
 
   Port to use for the SMTP server defined in `--email-host`
+
+  Example:
+
+  ```
+  --email-port 25
+  ```
 
 - `--from-email FROM_EMAIL`
 
   What will become the sender's address in sent emails.
 
+  ```
+  --from-email verificator@email.com
+  ```
+
 #### Optional arguments:
 
-- `--host HOST`
-- `--port PORT`
-- `--email-username EMAIL_USERNAME`
-- `--email-password EMAIL_PASSWORD`
-- `--email-use-tls`
-- `--email-start-tls`
-- `--email-validate-certs`
-- `--email-client-cert EMAIL_CLIENT_CERT`
-- `--email-client-key EMAIL_CLIENT_KEY`
-- `--email-subject EMAIL_SUBJECT`
-- `--cookie-secure`
-- `--auth-cookie-name AUTH_COOKIE_NAME`
-- `--verified-cookie-name VERIFIED_COOKIE_NAME`
-- `--auth-cookie-max-age AUTH_COOKIE_MAX_AGE`
-- `--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE`
-- `--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE`
+- `--host HOST` [default: 0.0.0.0]
+
+  The socket that access guard's server should bind to. This will be _inside_ of a
+  running container.
+
+- `--port PORT` [default: 8585]
+
+  The port that access guard's server should bind to. This will be _inside_ of a
+  running container.
+
+- `--email-username EMAIL_USERNAME` [default: unset]
+- `--email-password EMAIL_PASSWORD` [default: unset]
+- `--email-use-tls` [default: false]
+- `--email-start-tls` [default: false]
+- `--email-validate-certs` [default: true]
+- `--email-client-cert EMAIL_CLIENT_CERT` [default: unset]
+- `--email-client-key EMAIL_CLIENT_KEY` [default: unset]
+- `--email-subject EMAIL_SUBJECT` [default: Access guard verification]
+- `--cookie-secure` [default: false]
+- `--auth-cookie-name AUTH_COOKIE_NAME` [default: access-guard-forwarded]
+- `--verified-cookie-name VERIFIED_COOKIE_NAME` [default: access-guard-session]
+- `--auth-cookie-max-age AUTH_COOKIE_MAX_AGE` [default: 3600 (1 hour)]
+- `--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE` [default: 600 (10 minutes)]
+- `--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE` [default: 86400 (24 hours)]
 
 ## Contributing
 
