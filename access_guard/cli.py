@@ -21,7 +21,7 @@ def command(argv: list[str] | None = None) -> None:
     start_server()
 
 
-def compiled_lowercase_regex(pattern: str) -> re.Pattern:
+def lowercase_regex_pattern(pattern: str) -> re.Pattern:
     return re.compile(f"{pattern.lower()}")
 
 
@@ -43,7 +43,7 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "email_patterns",
         metavar="EMAIL_PATTERN",
-        type=compiled_lowercase_regex,
+        type=lowercase_regex_pattern,
         nargs="+",
         help="Email addresses to match, each compiled to a regex",
     )
