@@ -21,7 +21,7 @@ successful_healthcheck = mock.patch(
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def valid_command_args() -> tuple[list[str], dict[str, Any]]:
     return (
         [
@@ -131,6 +131,23 @@ def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
     assert (
         re.search(rf".*arguments are required: {error_msg_match}.*", stderr.getvalue())
         is not None
+    )
+
+
+def test_email_patterns_are_forced_lowercase(
+    valid_command_args: tuple[list[str], dict[str, Any]]
+) -> None:
+    argv, parsed_argv = valid_command_args
+    with ExitStack() as stack:
+        run_server = stack.enter_context(mock_run_server)
+        load_environ = stack.enter_context(mock_load_environ)
+        stack.enter_context(successful_healthcheck)
+        cli.command([".*@PaTtErN.CoM", *argv[1:]])
+
+    run_server.assert_called_once()
+    parsed_argv.pop("email_patterns")
+    load_environ.assert_called_once_with(
+        {"email_patterns": [re.compile(r".*@pattern.com")], **parsed_argv},
     )
 
 
