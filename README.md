@@ -114,6 +114,8 @@ Optional cookie arguments:
 
   Email address patterns to match for being allowed possibility to verify and access.
 
+  All entered patterns are case insensitively matched with emails entered by a client.
+
   Example:
 
   ```

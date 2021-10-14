@@ -21,6 +21,10 @@ def command(argv: list[str] | None = None) -> None:
     start_server()
 
 
+def compiled_lowercase_regex(pattern: str) -> re.Pattern:
+    return re.compile(f"{pattern.lower()}")
+
+
 def parse_argv(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="access-guard", description="...")
     required = parser.add_argument_group(title="Required arguments")
@@ -39,8 +43,7 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "email_patterns",
         metavar="EMAIL_PATTERN",
-        # type is expecting a str, while re.compile expects a r"..."
-        type=re.compile,  # type: ignore[arg-type]
+        type=compiled_lowercase_regex,
         nargs="+",
         help="Email addresses to match, each compiled to a regex",
     )
