@@ -170,10 +170,10 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         ),
     )
     email_optional.add_argument(
-        "--email-validate-certs",
+        "--email-no-validate-certs",
         dest="email_validate_certs",
         action="store_false",
-        help="Validate server certificates for SMTP [default: true]",
+        help="Disable validating server certificates for SMTP [default: false]",
     )
     email_optional.add_argument(
         "--email-client-cert",

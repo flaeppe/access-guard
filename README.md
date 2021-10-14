@@ -11,6 +11,7 @@ A forward authentication service that provides email verification.
   - [Arguments reference](#arguments-reference)
     - [Required arguments](#required-arguments)
     - [Optional arguments](#optional-arguments)
+- [Bleeding edge image](#bleeding-edge-image)
 - [Contributing](#contributing)
   - [Build image](#build-image)
   - [Running tests](#running-tests)
@@ -81,8 +82,8 @@ Optional email arguments:
                         Password to login with on configured SMTP server [default: unset]
   --email-use-tls       Make the _initial_ connection to the SMTP server over TLS/SSL [default: false]
   --email-start-tls     Make the initial connection to the SMTP server over plaintext, and then upgrade the connection to TLS/SSL [default: false]
-  --email-validate-certs
-                        Validate server certificates for SMTP [default: true]
+  --email-no-validate-certs
+                        Disable validating server certificates for SMTP [default: false]
   --email-client-cert EMAIL_CLIENT_CERT
                         Path to client side certificate, for TLS verification [default: unset]
   --email-client-key EMAIL_CLIENT_KEY
@@ -231,19 +232,77 @@ Optional cookie arguments:
   running container.
 
 - `--email-username EMAIL_USERNAME` [default: unset]
+
+  Username to login with on configured SMTP server
+
 - `--email-password EMAIL_PASSWORD` [default: unset]
+
+  Password to login with on configured SMTP server
+
 - `--email-use-tls` [default: false]
+
+  Make the _initial_ connection to the SMTP server over TLS/SSL.
+  Both `--email-use-tls` and `--email-start-tls` can _not_ be passed at the same time
+
 - `--email-start-tls` [default: false]
-- `--email-validate-certs` [default: true]
+
+  Make the initial connection to the SMTP server over plaintext, and then upgrade the
+  connection to TLS/SSL.
+  Both `--email-start-tls` and `--email-use-tls` can _not_ be passed at the same time
+
+- `--email-no-validate-certs` [default: false]
+
+  Disable validating server certificates for SMTP
+
 - `--email-client-cert EMAIL_CLIENT_CERT` [default: unset]
+
+  Path to client side certificate, for TLS verification
+
 - `--email-client-key EMAIL_CLIENT_KEY` [default: unset]
+
+  Path to client side key, for TLS verification
+
 - `--email-subject EMAIL_SUBJECT` [default: Access guard verification]
+
+  Subject of the email sent for verification
+
 - `--cookie-secure` [default: false]
+
+  Whether to only use secure cookies. When passed, cookies will be marked as 'secure'
+
 - `--auth-cookie-name AUTH_COOKIE_NAME` [default: access-guard-forwarded]
+
+  Name for cookie used during auth flow
+
 - `--verified-cookie-name VERIFIED_COOKIE_NAME` [default: access-guard-session]
+
+  Name for cookie set when auth completed successfully
+
 - `--auth-cookie-max-age AUTH_COOKIE_MAX_AGE` [default: 3600 (1 hour)]
+
+  Seconds before the cookie set _during_ auth flow should expire
+
 - `--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE` [default: 600 (10 minutes)]
+
+  Decides how many seconds a verification email should be valid. When the amount of
+  seconds has passed, the client has to request a new email.
+
 - `--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE` [default: 86400 (24 hours)]
+
+  Decides how many seconds a verified session cookie should be valid. When the amount
+  of seconds has passed, the client has to verify again.
+
+## Bleeding edge image
+
+An image named `edge` is built and released as soon as code is committed and passed
+all automated tests. Expect that there could be immediate issues when running with
+this tag.
+
+Use the following to pull the `edge` image from command line:
+
+```sh
+$ docker pull ghcr.io/flaeppe/access-guard:edge
+```
 
 ## Contributing
 
