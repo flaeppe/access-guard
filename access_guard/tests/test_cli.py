@@ -3,10 +3,10 @@ from __future__ import annotations
 import itertools
 import os
 import re
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from io import StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 from unittest import mock
 
 import pytest
@@ -72,26 +72,39 @@ def dict_to_argv(
     )
 
 
+@contextmanager
+def exiting_from_parse(exit_code: int = 2) -> Generator[mock.MagicMock, None, None]:
+    with pytest.raises(
+        SystemExit
+    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
+        yield stderr
+
+    run_server.assert_not_called()
+    assert cm.value.code == exit_code
+
+
+@contextmanager
+def mock_successful_startup() -> Generator[mock.MagicMock, None, None]:
+    with mock_run_server as run_server:
+        with mock_load_environ as load_environ:
+            with successful_healthcheck:
+                yield load_environ
+
+    run_server.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "argv", (["-V"], ["--version"]), ids=["short name", "long name"]
 )
 def test_version_from(argv: list[str]) -> None:
     version = "0.0.0-test"
-    with ExitStack() as stack:
-        stack.enter_context(
-            mock.patch.dict(
-                os.environ, {"ACCESS_GUARD_BUILD_VERSION": version}, clear=True
-            )
-        )
-        cm = stack.enter_context(pytest.raises(SystemExit))
-        run_server = stack.enter_context(mock_run_server)
-        stdout = stack.enter_context(
-            mock.patch("argparse._sys.stdout", new_callable=StringIO)
-        )
+    mock_environ = mock.patch.dict(
+        os.environ, {"ACCESS_GUARD_BUILD_VERSION": version}, clear=True
+    )
+    mock_stdout = mock.patch("argparse._sys.stdout", new_callable=StringIO)
+    with exiting_from_parse(exit_code=0), mock_environ, mock_stdout as stdout:
         cli.command(argv)
 
-    run_server.assert_not_called()
-    assert cm.value.code == 0
     assert f"access-guard {version}" in stdout.getvalue()
 
 
@@ -119,13 +132,9 @@ def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
         "--from-email": "webmaster@local.com",
     }
     required.pop(required_arg)
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
+    with exiting_from_parse() as stderr:
         cli.command(dict_to_argv(required, positionals={"email_patterns"}))
 
-    run_server.assert_not_called()
-    assert cm.value.code == 2
     assert (
         re.search(rf".*arguments are required: {error_msg_match}.*", stderr.getvalue())
         is not None
@@ -137,13 +146,9 @@ def test_secret_or_secret_file_arg_is_required(
 ) -> None:
     argv, __ = valid_command_args
     argv.pop("--secret")
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
+    with exiting_from_parse() as stderr:
         cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
 
-    run_server.assert_not_called()
-    assert cm.value.code == 2
     assert re.search(
         r".*one of the arguments -s/--secret -sf/--secret-file is required",
         stderr.getvalue(),
@@ -156,23 +161,16 @@ def test_email_patterns_are_forced_lowercase(
     argv, parsed_argv = valid_command_args
     argv.pop("email_patterns")
     parsed_argv.pop("email_patterns")
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    with mock_successful_startup() as load_environ:
         cli.command([".*@PaTtErN.CoM", *dict_to_argv(argv)])
 
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {"email_patterns": [re.compile(r".*@pattern.com")], **parsed_argv},
     )
 
 
 def test_defaults() -> None:
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    with mock_successful_startup() as load_environ:
         cli.command(
             [
                 ".*@defaults.com",
@@ -193,7 +191,6 @@ def test_defaults() -> None:
             ],
         )
 
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {
             "debug": False,
@@ -244,26 +241,19 @@ def test_mutually_exclusive_args(
     valid_command_args: tuple[dict[str, str], dict[str, Any]],
 ) -> None:
     argv, __ = valid_command_args
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
+    with exiting_from_parse() as stderr:
         cli.command(
             [*dict_to_argv(argv, positionals={"email_patterns"}), *additional_args]
         )
 
-    assert cm.value.code == 2
     assert re.search(msg_regex, stderr.getvalue()) is not None
-    run_server.assert_not_called()
 
 
 def test_email_client_cert_and_key_parsed_as_path(
     valid_command_args: tuple[dict[str, str], dict[str, Any]]
 ) -> None:
     argv, parsed_argv = valid_command_args
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    with mock_successful_startup() as load_environ:
         cli.command(
             [
                 *dict_to_argv(argv, positionals={"email_patterns"}),
@@ -274,7 +264,6 @@ def test_email_client_cert_and_key_parsed_as_path(
             ]
         )
 
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {
             **parsed_argv,
@@ -312,13 +301,10 @@ def test_can_load_args_from_file_with(
     argv, parsed_argv = valid_command_args
     argv.pop("--secret")
     parsed_argv.pop("secret")
-    with ExitStack() as stack:
-        open_file = stack.enter_context(
-            mock.patch("pathlib.Path.open", mock.mock_open(read_data=read_data))
-        )
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=read_data)
+    )
+    with mock_successful_startup() as load_environ, mock_path_open as open_file:
         cli.command(
             [
                 *dict_to_argv(argv, positionals={"email_patterns"}),
@@ -330,7 +316,6 @@ def test_can_load_args_from_file_with(
         )
 
     assert open_file.call_count == 2
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {**parsed_argv, "secret": expected, "email_password": expected}
     )
