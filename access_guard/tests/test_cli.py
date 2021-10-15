@@ -291,6 +291,7 @@ def test_email_client_cert_and_key_parsed_as_path(
         pytest.param(
             "secretfromfile\nshouldbeignored", "secretfromfile", id="multiple lines"
         ),
+        pytest.param(" ", " ", id="only spaces"),
     ),
 )
 def test_can_load_args_from_file_with(
@@ -318,6 +319,71 @@ def test_can_load_args_from_file_with(
     assert open_file.call_count == 2
     load_environ.assert_called_once_with(
         {**parsed_argv, "secret": expected, "email_password": expected}
+    )
+
+
+@pytest.mark.parametrize(
+    "file_contents",
+    (
+        pytest.param("", id="be empty"),
+        pytest.param("\n", id="be sole newline character"),
+        pytest.param("\nsomething", id="have an empty first line"),
+    ),
+)
+def test_secret_file_content_can_not(
+    file_contents: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
+) -> None:
+    argv, parsed_argv = valid_command_args
+    argv.pop("--secret")
+    parsed_argv.pop("secret")
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=file_contents)
+    )
+    with exiting_from_parse() as stderr, mock_path_open as open_file:
+        cli.command(
+            [
+                *dict_to_argv(argv, positionals={"email_patterns"}),
+                "--secret-file",
+                "secret/file",
+            ]
+        )
+
+    open_file.assert_called_once_with()
+    assert (
+        re.search(r".*empty first line in secret/file.*", stderr.getvalue()) is not None
+    )
+
+
+@pytest.mark.parametrize(
+    "file_contents",
+    (
+        pytest.param("", id="be empty"),
+        pytest.param("\n", id="be sole newline character"),
+        pytest.param("\nsomething", id="have an empty first line"),
+    ),
+)
+def test_email_password_file_content_can_not(
+    file_contents: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
+) -> None:
+    argv, parsed_argv = valid_command_args
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=file_contents)
+    )
+    with exiting_from_parse() as stderr, mock_path_open as open_file:
+        cli.command(
+            [
+                *dict_to_argv(argv, positionals={"email_patterns"}),
+                "--email-password-file",
+                "email/password/file",
+            ]
+        )
+
+    open_file.assert_called_once_with()
+    assert (
+        re.search(r".*empty first line in email/password/file.*", stderr.getvalue())
+        is not None
     )
 
 

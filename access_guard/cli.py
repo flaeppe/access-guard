@@ -12,16 +12,28 @@ from aiosmtplib.errors import SMTPException
 from .log import logger
 
 
+def read_first_line(path: Path) -> str:
+    with path.open() as f:
+        value = f.readline().rstrip("\n")
+
+    if not value:
+        sys.stderr.write(f"Encountered empty first line in {str(path)}\n")
+        sys.exit(2)
+
+    return value
+
+
 def command(argv: list[str] | None = None) -> None:
     from access_guard.environ import environ
 
     parsed = vars(parse_argv(argv if argv is not None else sys.argv[1:]))
-    if secret_file := parsed.pop("secret_file", None):
-        with secret_file.open() as f:
-            parsed["secret"] = f.readline().rstrip("\n")
+    parsed["secret"] = (
+        read_first_line(secret_file)
+        if (secret_file := parsed.pop("secret_file", None))
+        else parsed["secret"]
+    )
     if email_password_file := parsed.pop("email_password_file", None):
-        with email_password_file.open() as f:
-            parsed["email_password"] = f.readline().rstrip("\n")
+        parsed["email_password"] = read_first_line(email_password_file)
 
     environ.load(parsed)
 
@@ -62,7 +74,12 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         "-s", "--secret", type=str, dest="secret", help="Secret key"
     )
     secret_mutex.add_argument(
-        "-sf", "--secret-file", type=Path, dest="secret_file", help="Secret key file"
+        "-sf",
+        "--secret-file",
+        type=Path,
+        dest="secret_file",
+        metavar="PATH_TO_FILE",
+        help="Secret key file",
     )
     # TODO: Validate auth_host is subdomain of cookie_domain
     required.add_argument(
@@ -170,6 +187,7 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         "--email-password-file",
         type=Path,
         dest="email_password_file",
+        metavar="PATH_TO_FILE",
         default=argparse.SUPPRESS,
         help=(
             "File containing password to login with on configured SMTP server"
