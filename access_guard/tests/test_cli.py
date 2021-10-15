@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import itertools
 import os
 import re
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from io import StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 from unittest import mock
 
 import pytest
@@ -22,25 +24,18 @@ successful_healthcheck = mock.patch(
 
 
 @pytest.fixture(scope="function")
-def valid_command_args() -> tuple[list[str], dict[str, Any]]:
+def valid_command_args() -> tuple[dict[str, str], dict[str, Any]]:
     return (
-        [
-            ".*",
-            "--secret",
-            "supersecret",
-            "--auth-host",
-            "valid.local",
-            "--trusted-hosts",
-            "valid.local",
-            "--cookie-domain",
-            "valid.local",
-            "--email-host",
-            "email-host",
-            "--email-port",
-            "666",
-            "--from-email",
-            "webmaster@local.com",
-        ],
+        {
+            "email_patterns": ".*",
+            "--secret": "supersecret",
+            "--auth-host": "valid.local",
+            "--trusted-hosts": "valid.local",
+            "--cookie-domain": "valid.local",
+            "--email-host": "email-host",
+            "--email-port": "666",
+            "--from-email": "webmaster@local.com",
+        },
         {
             "debug": False,
             "email_patterns": [re.compile(r".*")],
@@ -64,26 +59,52 @@ def valid_command_args() -> tuple[list[str], dict[str, Any]]:
     )
 
 
+def dict_to_argv(
+    args: dict[str, str], positionals: set[str] | None = None
+) -> list[str]:
+    return list(
+        itertools.chain.from_iterable(
+            [
+                ((name, value) if name not in (positionals or set()) else (value,))
+                for name, value in args.items()
+            ]
+        )
+    )
+
+
+@contextmanager
+def exiting_from_parse(exit_code: int = 2) -> Generator[mock.MagicMock, None, None]:
+    with pytest.raises(
+        SystemExit
+    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
+        yield stderr
+
+    run_server.assert_not_called()
+    assert cm.value.code == exit_code
+
+
+@contextmanager
+def mock_successful_startup() -> Generator[mock.MagicMock, None, None]:
+    with mock_run_server as run_server:
+        with mock_load_environ as load_environ:
+            with successful_healthcheck:
+                yield load_environ
+
+    run_server.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "argv", (["-V"], ["--version"]), ids=["short name", "long name"]
 )
 def test_version_from(argv: list[str]) -> None:
     version = "0.0.0-test"
-    with ExitStack() as stack:
-        stack.enter_context(
-            mock.patch.dict(
-                os.environ, {"ACCESS_GUARD_BUILD_VERSION": version}, clear=True
-            )
-        )
-        cm = stack.enter_context(pytest.raises(SystemExit))
-        run_server = stack.enter_context(mock_run_server)
-        stdout = stack.enter_context(
-            mock.patch("argparse._sys.stdout", new_callable=StringIO)
-        )
+    mock_environ = mock.patch.dict(
+        os.environ, {"ACCESS_GUARD_BUILD_VERSION": version}, clear=True
+    )
+    mock_stdout = mock.patch("argparse._sys.stdout", new_callable=StringIO)
+    with exiting_from_parse(exit_code=0), mock_environ, mock_stdout as stdout:
         cli.command(argv)
 
-    run_server.assert_not_called()
-    assert cm.value.code == 0
     assert f"access-guard {version}" in stdout.getvalue()
 
 
@@ -91,7 +112,6 @@ def test_version_from(argv: list[str]) -> None:
     "required_arg,error_msg_match",
     (
         pytest.param("email_patterns", "EMAIL_PATTERN", id="email patterns"),
-        pytest.param("--secret", "-s/--secret", id="secret"),
         pytest.param("--auth-host", "-a/--auth-host", id="auth host"),
         pytest.param("--trusted-hosts", "-t/--trusted-hosts", id="trusted hosts"),
         pytest.param("--cookie-domain", "-c/--cookie-domain", id="cookie domain"),
@@ -112,50 +132,45 @@ def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
         "--from-email": "webmaster@local.com",
     }
     required.pop(required_arg)
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
-        cli.command(
-            list(
-                itertools.chain.from_iterable(
-                    [
-                        ((name, value) if name != "email_patterns" else (value,))
-                        for name, value in required.items()
-                    ]
-                )
-            )
-        )
+    with exiting_from_parse() as stderr:
+        cli.command(dict_to_argv(required, positionals={"email_patterns"}))
 
-    run_server.assert_not_called()
-    assert cm.value.code == 2
     assert (
         re.search(rf".*arguments are required: {error_msg_match}.*", stderr.getvalue())
         is not None
     )
 
 
+def test_secret_or_secret_file_arg_is_required(
+    valid_command_args: tuple[dict[str, str], dict[str, Any]]
+) -> None:
+    argv, __ = valid_command_args
+    argv.pop("--secret")
+    with exiting_from_parse() as stderr:
+        cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
+
+    assert re.search(
+        r".*one of the arguments -s/--secret -sf/--secret-file is required",
+        stderr.getvalue(),
+    )
+
+
 def test_email_patterns_are_forced_lowercase(
-    valid_command_args: tuple[list[str], dict[str, Any]]
+    valid_command_args: tuple[dict[str, str], dict[str, Any]]
 ) -> None:
     argv, parsed_argv = valid_command_args
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
-        cli.command([".*@PaTtErN.CoM", *argv[1:]])
-
-    run_server.assert_called_once()
+    argv.pop("email_patterns")
     parsed_argv.pop("email_patterns")
+    with mock_successful_startup() as load_environ:
+        cli.command([".*@PaTtErN.CoM", *dict_to_argv(argv)])
+
     load_environ.assert_called_once_with(
         {"email_patterns": [re.compile(r".*@pattern.com")], **parsed_argv},
     )
 
 
 def test_defaults() -> None:
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    with mock_successful_startup() as load_environ:
         cli.command(
             [
                 ".*@defaults.com",
@@ -176,7 +191,6 @@ def test_defaults() -> None:
             ],
         )
 
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {
             "debug": False,
@@ -201,32 +215,48 @@ def test_defaults() -> None:
     )
 
 
-def test_email_use_tls_and_start_tls_are_mutually_exclusive(
-    valid_command_args: tuple[list[str], dict[str, Any]]
+@pytest.mark.parametrize(
+    "additional_args,msg_regex",
+    (
+        pytest.param(
+            ["--secret-file", "some/file"],
+            r".*-sf/--secret-file.*not allowed with argument.*-s/--secret",
+            id="secret and secret file",
+        ),
+        pytest.param(
+            ["--email-use-tls", "--email-start-tls"],
+            r".*--email-start-tls.*not allowed with argument.*--email-use-tls.*",
+            id="email use tls and email start tls",
+        ),
+        pytest.param(
+            ["--email-password", "supersecret", "--email-password-file", "some/file"],
+            r".*--email-password-file.*not allowed with argument.*--email-password",
+            id="email password and email password file",
+        ),
+    ),
+)
+def test_mutually_exclusive_args(
+    additional_args: list[str],
+    msg_regex: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
 ) -> None:
     argv, __ = valid_command_args
-    with pytest.raises(
-        SystemExit
-    ) as cm, mock_run_server as run_server, mock_stderr as stderr:
-        cli.command([*argv, "--email-use-tls", "--email-start-tls"])
+    with exiting_from_parse() as stderr:
+        cli.command(
+            [*dict_to_argv(argv, positionals={"email_patterns"}), *additional_args]
+        )
 
-    assert cm.value.code == 2
-    msg_regex = r".*--email-start-tls.*not allowed with argument.*--email-use-tls.*"
     assert re.search(msg_regex, stderr.getvalue()) is not None
-    run_server.assert_not_called()
 
 
 def test_email_client_cert_and_key_parsed_as_path(
-    valid_command_args: tuple[list[str], dict[str, Any]]
+    valid_command_args: tuple[dict[str, str], dict[str, Any]]
 ) -> None:
     argv, parsed_argv = valid_command_args
-    with ExitStack() as stack:
-        run_server = stack.enter_context(mock_run_server)
-        load_environ = stack.enter_context(mock_load_environ)
-        stack.enter_context(successful_healthcheck)
+    with mock_successful_startup() as load_environ:
         cli.command(
             [
-                *argv,
+                *dict_to_argv(argv, positionals={"email_patterns"}),
                 "--email-client-cert",
                 "path/to/cert.cert",
                 "--email-client-key",
@@ -234,13 +264,126 @@ def test_email_client_cert_and_key_parsed_as_path(
             ]
         )
 
-    run_server.assert_called_once()
     load_environ.assert_called_once_with(
         {
             **parsed_argv,
             "email_client_cert": Path("path/to/cert.cert"),
             "email_client_key": Path("path/to/key.key"),
         }
+    )
+
+
+@pytest.mark.parametrize(
+    "read_data,expected",
+    (
+        pytest.param("secretfromfile", "secretfromfile", id="no trailing space"),
+        pytest.param(
+            "secretfromfile\n", "secretfromfile", id="content ending with newline"
+        ),
+        pytest.param(
+            "secretfromfile  ", "secretfromfile  ", id="content ending with spaces"
+        ),
+        pytest.param(
+            "secretfromfile  \n",
+            "secretfromfile  ",
+            id="content ending with spaces and newline",
+        ),
+        pytest.param(
+            "secretfromfile\nshouldbeignored", "secretfromfile", id="multiple lines"
+        ),
+        pytest.param(" ", " ", id="only spaces"),
+    ),
+)
+def test_can_load_args_from_file_with(
+    read_data: str,
+    expected: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
+) -> None:
+    argv, parsed_argv = valid_command_args
+    argv.pop("--secret")
+    parsed_argv.pop("secret")
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=read_data)
+    )
+    with mock_successful_startup() as load_environ, mock_path_open as open_file:
+        cli.command(
+            [
+                *dict_to_argv(argv, positionals={"email_patterns"}),
+                "--secret-file",
+                "secret/file",
+                "--email-password-file",
+                "password/file",
+            ]
+        )
+
+    assert open_file.call_count == 2
+    load_environ.assert_called_once_with(
+        {**parsed_argv, "secret": expected, "email_password": expected}
+    )
+
+
+@pytest.mark.parametrize(
+    "file_contents",
+    (
+        pytest.param("", id="be empty"),
+        pytest.param("\n", id="be sole newline character"),
+        pytest.param("\nsomething", id="have an empty first line"),
+    ),
+)
+def test_secret_file_content_can_not(
+    file_contents: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
+) -> None:
+    argv, parsed_argv = valid_command_args
+    argv.pop("--secret")
+    parsed_argv.pop("secret")
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=file_contents)
+    )
+    with exiting_from_parse() as stderr, mock_path_open as open_file:
+        cli.command(
+            [
+                *dict_to_argv(argv, positionals={"email_patterns"}),
+                "--secret-file",
+                "secret/file",
+            ]
+        )
+
+    open_file.assert_called_once_with()
+    assert (
+        re.search(r".*empty first line in secret/file.*", stderr.getvalue()) is not None
+    )
+
+
+@pytest.mark.parametrize(
+    "file_contents",
+    (
+        pytest.param("", id="be empty"),
+        pytest.param("\n", id="be sole newline character"),
+        pytest.param("\nsomething", id="have an empty first line"),
+    ),
+)
+def test_email_password_file_content_can_not(
+    file_contents: str,
+    valid_command_args: tuple[dict[str, str], dict[str, Any]],
+) -> None:
+    argv, parsed_argv = valid_command_args
+    mock_path_open = mock.patch(
+        "pathlib.Path.open", mock.mock_open(read_data=file_contents)
+    )
+    with exiting_from_parse() as stderr, mock_path_open as open_file:
+        cli.command(
+            [
+                *dict_to_argv(argv, positionals={"email_patterns"}),
+                "--email-password-file",
+                "email/password/file",
+            ]
+        )
+
+    open_file.assert_called_once_with()
+    assert (
+        re.search(r".*empty first line in email/password/file.*", stderr.getvalue())
+        is not None
     )
 
 
@@ -264,7 +407,7 @@ class TestHealthcheck:
             cm = stack.enter_context(pytest.raises(SystemExit))
 
             smtp_connection.side_effect = error("failed")
-            cli.command(argv)
+            cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
 
         assert cm.value.code == 666
         run_server.assert_not_called()

@@ -56,6 +56,8 @@ optional arguments:
 Required arguments:
   -s SECRET, --secret SECRET
                         Secret key
+  -sf PATH_TO_FILE, --secret-file PATH_TO_FILE
+                        Secret key file
   -a AUTH_HOST, --auth-host AUTH_HOST
                         The entrypoint domain name for access guard (without protocol or path)
   -t TRUSTED_HOST [TRUSTED_HOST ...], --trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]
@@ -80,6 +82,8 @@ Optional email arguments:
                         Username to login with on configured SMTP server [default: unset]
   --email-password EMAIL_PASSWORD
                         Password to login with on configured SMTP server [default: unset]
+  --email-password-file PATH_TO_FILE
+                        File containing password to login with on configured SMTP server [default: unset]
   --email-use-tls       Make the _initial_ connection to the SMTP server over TLS/SSL [default: false]
   --email-start-tls     Make the initial connection to the SMTP server over plaintext, and then upgrade the connection to TLS/SSL [default: false]
   --email-no-validate-certs
@@ -126,6 +130,23 @@ Optional cookie arguments:
 - `-s/--secret SECRET`
 
   Should be set to a unique, unpredictable value. Is used for cryptographic signing.
+
+  Both `--secret` and `--secret-file` can _not_ be passed at the same time
+
+- `-sf/--secret-file PATH_TO_FILE`
+
+  As an alternative to passing the secret via command line, the value can be loaded
+  from a file present in the container. For example:
+
+  ```
+  --secret-file /run/secrets/access-guard-secret
+  ```
+
+  Only the _first line_ of the secret file will be read and any newline character at
+  the end of it will be removed. If the first line is _empty_ after any newline
+  character has been removed, an error will be raised.
+
+  Both `--secret-file` and `--secret` can _not_ be passed at the same time.
 
 - `-a/--auth-host AUTH_HOST`
 
@@ -238,6 +259,25 @@ Optional cookie arguments:
 - `--email-password EMAIL_PASSWORD` [default: unset]
 
   Password to login with on configured SMTP server
+
+  Both `--email-password` and `--email-password-file` can _not_ be passed at the same
+  time
+
+- `--email-password-file PATH_TO_FILE` [default: unset]
+
+  As an alternative to passing a password via command line, the value can be loaded
+  from a file present in the container. For example:
+
+  ```
+  --email-password-file /run/secrets/email-passwd
+  ```
+
+  Only the _first line_ of the password file will be read and any newline character at
+  the end of it will be removed. If the first line is _empty_ after any newline
+  character has been removed, an error will be raised.
+
+  Both `--email-password-file` and `--email-password` can _not_ be passed at the same
+  time
 
 - `--email-use-tls` [default: false]
 
