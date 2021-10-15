@@ -12,17 +12,6 @@ from aiosmtplib.errors import SMTPException
 from .log import logger
 
 
-def read_first_line(path: Path) -> str:
-    with path.open() as f:
-        value = f.readline().rstrip("\n")
-
-    if not value:
-        sys.stderr.write(f"Encountered empty first line in {str(path)}\n")
-        sys.exit(2)
-
-    return value
-
-
 def command(argv: list[str] | None = None) -> None:
     from access_guard.environ import environ
 
@@ -305,14 +294,25 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-class HealthcheckFailed(Exception):
-    ...
-
-
 def start_server() -> None:
     from access_guard import server
 
     server.run()
+
+
+def read_first_line(path: Path) -> str:
+    with path.open() as f:
+        value = f.readline().rstrip("\n")
+
+    if not value:
+        sys.stderr.write(f"Encountered empty first line in {str(path)}\n")
+        sys.exit(2)
+
+    return value
+
+
+class HealthcheckFailed(Exception):
+    ...
 
 
 async def _check_smtp() -> None:
