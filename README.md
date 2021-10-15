@@ -143,9 +143,10 @@ Optional cookie arguments:
   ```
 
   Only the _first line_ of the secret file will be read and any newline character at
-  the end of it will be removed.
+  the end of it will be removed. If the first line is _empty_ after any newline
+  character has been removed, an error will be raised.
 
-  Both `--secret-file` and `--secret` can _not_ be passed at the same time
+  Both `--secret-file` and `--secret` can _not_ be passed at the same time.
 
 - `-a/--auth-host AUTH_HOST`
 
@@ -272,7 +273,8 @@ Optional cookie arguments:
   ```
 
   Only the _first line_ of the password file will be read and any newline character at
-  the end of it will be removed.
+  the end of it will be removed. If the first line is _empty_ after any newline
+  character has been removed, an error will be raised.
 
   Both `--email-password-file` and `--email-password` can _not_ be passed at the same
   time
