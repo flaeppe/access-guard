@@ -102,7 +102,6 @@ class TestAuth:
         response = self.api_client.get(self.url)
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert response.text == ""
-        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_renders_auth_form_on_get_when_auth_cookie_is_valid(
         self, auth_cookie_set: RequestsCookieJar
@@ -153,6 +152,20 @@ class TestAuth:
         send_mail.assert_not_called()
         # Should not do anything with auth cookie
         assert settings.AUTH_COOKIE_NAME not in get_cookies(response)
+
+    def test_returns_unauthorized_on_invalid_auth_cookie_payload(self) -> None:
+        cookies = RequestsCookieJar()
+        cookies.set(
+            name=settings.AUTH_COOKIE_NAME,
+            value=settings.SIGNING.timed.dumps({"unknown": "payload"}),
+            domain=settings.COOKIE_DOMAIN,
+            secure=False,
+            rest={"HttpOnly": True},
+        )
+        response = self.api_client.get(self.url, cookies=cookies)
+
+        assert response.status_code == HTTPStatus.UNAUTHORIZED
+        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_verification_email_is_not_sent_when_email_not_matching_any_pattern(
         self, auth_cookie_set: RequestsCookieJar
@@ -254,7 +267,7 @@ class TestAuth:
             auth_cookie_set[settings.AUTH_COOKIE_NAME], max_age=60 * 60
         )
 
-    def test_unsets_cookie_expired_auth_cookie_when_forward_headers_are_missing(
+    def test_is_unauthorized_with_expired_auth_cookie_and_no_forward_headers(
         self, expired_auth_cookie_set: RequestsCookieJar
     ) -> None:
         response = self.api_client.get(
@@ -263,9 +276,8 @@ class TestAuth:
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
-    def test_deletes_signature_expired_auth_cookie_when_forward_headers_are_missing(
+    def test_is_unauthorized_with_expired_auth_cookie_signature_and_no_forward_headers(
         self, auth_cookie_set: RequestsCookieJar
     ) -> None:
         with mock_time_signer_loads as loads:
@@ -277,7 +289,6 @@ class TestAuth:
             )
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
             auth_cookie_set[settings.AUTH_COOKIE_NAME],
             max_age=settings.AUTH_COOKIE_MAX_AGE,
@@ -399,7 +410,6 @@ class TestAuth:
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
-        assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
 
 class TestVerify:

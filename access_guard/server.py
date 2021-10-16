@@ -27,6 +27,10 @@ class TamperedAuthCookie(Exception):
     ...
 
 
+class IncompatibleAuthCookie(Exception):
+    ...
+
+
 def validate_auth_cookie(request: Request) -> ForwardHeaders | None:
     cookie = request.cookies.get(settings.AUTH_COOKIE_NAME)
     try:
@@ -35,12 +39,18 @@ def validate_auth_cookie(request: Request) -> ForwardHeaders | None:
         # We'll simulate an expired cookie signature as an expired cookie
         # thus allowing for generating a new one
         date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-        logger.info(
-            "validate_auth_cookie.signature_expired %s", date_signed, exc_info=True
-        )
+        logger.info("validate_auth_cookie.signature_expired %s", date_signed)
         return None
     except BadData as exc:
+        logger.warning("validate_auth_cookie.tampered", exc_info=True)
         raise TamperedAuthCookie from exc
+    except ValidationError as exc:
+        logger.error(
+            "validate_auth_cookie.incompatible_signature_payload %s",
+            cookie,
+            exc_info=True,
+        )
+        raise IncompatibleAuthCookie from exc
 
 
 Endpoint = Callable[[Request], Awaitable[Response]]
@@ -54,7 +64,7 @@ def check_if_verified(endpoint: Endpoint) -> Endpoint:
                 response.delete_cookie(
                     settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
                 )
-            logger.info("verify_session.success")
+            logger.info("verify_session.access_granted")
             return response
 
         return await endpoint(request)
@@ -62,95 +72,103 @@ def check_if_verified(endpoint: Endpoint) -> Endpoint:
     return check
 
 
-async def prepare_email_auth(request: Request) -> Response:
-    forward_headers = validate_auth_cookie(request)
-    if not forward_headers:
-        forward_headers = ForwardHeaders.parse_obj(request.headers)
-        response: Response = RedirectResponse(
-            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
-            status_code=HTTPStatus.SEE_OTHER,
-        )
-        response.set_cookie(
-            key=settings.AUTH_COOKIE_NAME,
-            value=forward_headers.encode(),
-            max_age=settings.AUTH_COOKIE_MAX_AGE,
-            expires=settings.AUTH_COOKIE_MAX_AGE,
-            domain=settings.COOKIE_DOMAIN,
-            secure=settings.COOKIE_SECURE,
-            httponly=True,
-        )
-        return response
-
-    # Refreshing at certain points could result in domain we're currently at not
-    # being our auth host and now we have a valid auth cookie. If that is the case,
-    # we redirect to our auth host, revisiting this place under configured domain.
-    # As otherwise any form we render could post towards somewhere that'll 404.
-    if request.base_url.netloc != settings.DOMAIN:
-        return RedirectResponse(
-            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
-            status_code=HTTPStatus.TEMPORARY_REDIRECT,
-        )
-    elif request.method == "POST":
-        data = await request.form()
-        try:
-            form = SendEmailForm.parse_obj(data)
-        except ValidationError as exc:
-            logger.debug("auth.send_email_form.invalid", exc_info=True)
-            return templates.TemplateResponse(
-                "send_email.html",
-                {
-                    "request": request,
-                    "host_name": forward_headers.host_name,
-                    "errors": exc.errors(),
-                },
-                status_code=HTTPStatus.BAD_REQUEST,
-            )
-
-        email_task = None
-        if form.has_allowed_email:
-            auth_signature = AuthSignature.create(
-                email=form.email, forward_headers=forward_headers
-            )
-            email_task = BackgroundTask(
-                send_mail,
-                email=auth_signature.email,
-                link=request.url_for("verify", signature=auth_signature.signature),
-                host_name=forward_headers.host_name,
-            )
-            logger.debug("auth.send_verification_email")
-
-        response = templates.TemplateResponse(
-            "email_sent.html",
-            {"request": request},
-            status_code=HTTPStatus.OK,
-            # TODO: Starlette is missing an `Optional` as default value is None
-            background=email_task,  # type: ignore[arg-type]
-        )
-        response.delete_cookie(settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
-        return response
-    else:
-        # Auth cookie valid and set, refreshing a page should not allow
-        # for being authorized
+async def handle_email_auth(
+    request: Request, forward_headers: ForwardHeaders
+) -> Response:
+    data = await request.form()
+    try:
+        form = SendEmailForm.parse_obj(data)
+    except ValidationError as exc:
+        logger.debug("auth.send_email_form.invalid", exc_info=True)
         return templates.TemplateResponse(
             "send_email.html",
-            {"request": request, "host_name": forward_headers.host_name},
-            status_code=HTTPStatus.UNAUTHORIZED,
+            {
+                "request": request,
+                "host_name": forward_headers.host_name,
+                "errors": exc.errors(),
+            },
+            status_code=HTTPStatus.BAD_REQUEST,
         )
+
+    email_task = None
+    if form.has_allowed_email:
+        auth_signature = AuthSignature.create(
+            email=form.email, forward_headers=forward_headers
+        )
+        email_task = BackgroundTask(
+            send_mail,
+            email=auth_signature.email,
+            link=request.url_for("verify", signature=auth_signature.signature),
+            host_name=forward_headers.host_name,
+        )
+        logger.debug("auth.send_verification_email")
+
+    response = templates.TemplateResponse(
+        "email_sent.html",
+        {"request": request},
+        status_code=HTTPStatus.OK,
+        # TODO: Starlette is missing an `Optional` as default value is None
+        background=email_task,  # type: ignore[arg-type]
+    )
+    response.delete_cookie(settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
+    return response
+
+
+def redirect_to_auth(request: Request) -> Response:
+    try:
+        forward_headers = ForwardHeaders.parse_obj(request.headers)
+    except ValidationError:
+        logger.warning("forward_headers.invalid", exc_info=True)
+        return HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
+
+    response = RedirectResponse(
+        url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
+        status_code=HTTPStatus.SEE_OTHER,
+    )
+    response.set_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        value=forward_headers.encode(),
+        max_age=settings.AUTH_COOKIE_MAX_AGE,
+        expires=settings.AUTH_COOKIE_MAX_AGE,
+        domain=settings.COOKIE_DOMAIN,
+        secure=settings.COOKIE_SECURE,
+        httponly=True,
+    )
+    return response
 
 
 @check_if_verified
 async def auth(request: Request) -> Response:
     # TODO: Accept verification/authorization from forwarder
     try:
-        response = await prepare_email_auth(request)
-    except TamperedAuthCookie:
-        response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
+        forward_headers = validate_auth_cookie(request)
+    except (TamperedAuthCookie, IncompatibleAuthCookie):
+        response: Response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
         response.delete_cookie(settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
-        logger.warning("auth.auth_cookie.tampered")
-    except ValidationError:
-        response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-        response.delete_cookie(settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
-        logger.warning("auth.invalid", exc_info=True)
+        return response
+
+    if not forward_headers:
+        # Client hasn't been here before, force a revisit with collected forward headers
+        response = redirect_to_auth(request)
+    elif request.base_url.netloc != settings.DOMAIN:
+        # Refreshing at certain points could result in domain we're currently at not
+        # being our auth host and now we have a valid auth cookie. If that is the case,
+        # we redirect to our auth host, revisiting this place under configured domain.
+        # As otherwise any form we render could post towards somewhere that'll 404.
+        response = RedirectResponse(
+            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
+            status_code=HTTPStatus.TEMPORARY_REDIRECT,
+        )
+    elif request.method == "POST":
+        response = await handle_email_auth(request, forward_headers)
+    else:
+        # Auth cookie valid and set, refreshing a page should not allow
+        # for being authorized
+        response = templates.TemplateResponse(
+            "send_email.html",
+            {"request": request, "host_name": forward_headers.host_name},
+            status_code=HTTPStatus.UNAUTHORIZED,
+        )
 
     # Remove any non valid verification cookie when running flow to generate a new one
     if request.cookies.get(settings.VERIFIED_COOKIE_NAME):
