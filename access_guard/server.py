@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from pathlib import Path
-from typing import Awaitable, Callable
 
 from itsdangerous.exc import BadData, SignatureExpired
 from pydantic.error_wrappers import ValidationError
@@ -53,26 +52,68 @@ def validate_auth_cookie(request: Request) -> ForwardHeaders | None:
         raise IncompatibleAuthCookie from exc
 
 
-Endpoint = Callable[[Request], Awaitable[Response]]
+def get_forward_headers(request: Request) -> ForwardHeaders | None:
+    # First try to get forward headers from an auth cookie
+    try:
+        forward_headers = validate_auth_cookie(request)
+    except (TamperedAuthCookie, IncompatibleAuthCookie):
+        forward_headers = None
+
+    if not forward_headers:
+        # If we can't get them from an auth cookie, also try from headers
+        try:
+            forward_headers = ForwardHeaders.parse_obj(request.headers)
+        except ValidationError:
+            logger.warning("get_forward_headers.invalid_headers", exc_info=True)
+
+    return forward_headers
 
 
-def check_if_verified(endpoint: Endpoint) -> Endpoint:
-    async def check(request: Request) -> Response:
-        if Verification.check(request.cookies.get(settings.VERIFIED_COOKIE_NAME, "")):
-            response = HTMLResponse("", status_code=HTTPStatus.OK)
-            if request.cookies.get(settings.AUTH_COOKIE_NAME):
-                response.delete_cookie(
-                    settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
-                )
-            logger.info("verify_session.access_granted")
-            return response
+async def auth(request: Request) -> Response:
+    # TODO: Accept verification/authorization from forwarder
+    # First check if the request has a valid session
+    if Verification.check(request.cookies.get(settings.VERIFIED_COOKIE_NAME, "")):
+        response: Response = HTMLResponse("", status_code=HTTPStatus.OK)
+        if request.cookies.get(settings.AUTH_COOKIE_NAME):
+            response.delete_cookie(
+                settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+            )
+        logger.info("auth.access_granted")
+        return response
 
-        return await endpoint(request)
+    # If there's no valid session, collect forward headers if possible and
+    # redirect to /send
+    if forward_headers := get_forward_headers(request):
+        response = RedirectResponse(
+            url=f"{forward_headers.proto}://{settings.DOMAIN}/send",
+            status_code=HTTPStatus.SEE_OTHER,
+        )
+        response.set_cookie(
+            key=settings.AUTH_COOKIE_NAME,
+            value=forward_headers.encode(),
+            max_age=settings.AUTH_COOKIE_MAX_AGE,
+            expires=settings.AUTH_COOKIE_MAX_AGE,
+            domain=settings.COOKIE_DOMAIN,
+            secure=settings.COOKIE_SECURE,
+            httponly=True,
+        )
+    else:
+        response = HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
+        # TODO: Should we even clean up cookies?
+        if request.cookies.get(settings.AUTH_COOKIE_NAME):
+            response.delete_cookie(
+                settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+            )
 
-    return check
+    # Remove any non valid verification cookie when running flow to generate a new one
+    if request.cookies.get(settings.VERIFIED_COOKIE_NAME):
+        response.delete_cookie(
+            settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
+        )
+    return response
 
 
-async def handle_email_auth(
+async def handle_send_email(
     request: Request, forward_headers: ForwardHeaders
 ) -> Response:
     data = await request.form()
@@ -114,32 +155,8 @@ async def handle_email_auth(
     return response
 
 
-def redirect_to_auth(request: Request) -> Response:
-    try:
-        forward_headers = ForwardHeaders.parse_obj(request.headers)
-    except ValidationError:
-        logger.warning("forward_headers.invalid", exc_info=True)
-        return HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
-
-    response = RedirectResponse(
-        url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
-        status_code=HTTPStatus.SEE_OTHER,
-    )
-    response.set_cookie(
-        key=settings.AUTH_COOKIE_NAME,
-        value=forward_headers.encode(),
-        max_age=settings.AUTH_COOKIE_MAX_AGE,
-        expires=settings.AUTH_COOKIE_MAX_AGE,
-        domain=settings.COOKIE_DOMAIN,
-        secure=settings.COOKIE_SECURE,
-        httponly=True,
-    )
-    return response
-
-
-@check_if_verified
-async def auth(request: Request) -> Response:
-    # TODO: Accept verification/authorization from forwarder
+async def send(request: Request) -> Response:
+    # Reaching send an auth cookie has to be set
     try:
         forward_headers = validate_auth_cookie(request)
     except (TamperedAuthCookie, IncompatibleAuthCookie):
@@ -148,37 +165,24 @@ async def auth(request: Request) -> Response:
         return response
 
     if not forward_headers:
-        # Client hasn't been here before, force a revisit with collected forward headers
-        response = redirect_to_auth(request)
-    elif request.base_url.netloc != settings.DOMAIN:
-        # Refreshing at certain points could result in domain we're currently at not
-        # being our auth host and now we have a valid auth cookie. If that is the case,
-        # we redirect to our auth host, revisiting this place under configured domain.
-        # As otherwise any form we render could post towards somewhere that'll 404.
-        response = RedirectResponse(
-            url=f"{forward_headers.proto}://{settings.DOMAIN}/auth",
-            status_code=HTTPStatus.TEMPORARY_REDIRECT,
-        )
-    elif request.method == "POST":
-        response = await handle_email_auth(request, forward_headers)
+        logger.warning("send.auth_cookie.missing")
+        return HTMLResponse("", status_code=HTTPStatus.UNAUTHORIZED)
+
+    # Should only raise if access-guard has been configured incorrectly
+    assert request.base_url.netloc == settings.DOMAIN
+    if request.method == "POST":
+        # TODO: CSRF
+        response = await handle_send_email(request, forward_headers)
     else:
-        # Auth cookie valid and set, refreshing a page should not allow
-        # for being authorized
         response = templates.TemplateResponse(
             "send_email.html",
             {"request": request, "host_name": forward_headers.host_name},
-            status_code=HTTPStatus.UNAUTHORIZED,
+            status_code=HTTPStatus.OK,
         )
 
-    # Remove any non valid verification cookie when running flow to generate a new one
-    if request.cookies.get(settings.VERIFIED_COOKIE_NAME):
-        response.delete_cookie(
-            settings.VERIFIED_COOKIE_NAME, domain=settings.COOKIE_DOMAIN
-        )
     return response
 
 
-@check_if_verified
 async def verify(request: Request) -> Response:
     try:
         auth_signature = AuthSignature.loads(request.path_params["signature"])
@@ -212,6 +216,7 @@ async def verify(request: Request) -> Response:
 
 routes = [
     Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
+    Route("/send", endpoint=send, methods=["GET", "POST"], name="send"),
     Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
     Mount(
         "/static",

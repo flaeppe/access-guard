@@ -71,6 +71,11 @@ def auth_url() -> str:
     return "/auth"
 
 
+@pytest.fixture(scope="session")
+def send_url() -> str:
+    return "/send"
+
+
 @pytest.fixture(scope="function")
 def valid_auth_signature() -> AuthSignature:
     return AuthSignature.create(
