@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from pathlib import Path
+from typing import Any
 
 from itsdangerous.exc import BadData, SignatureExpired
 from pydantic.error_wrappers import ValidationError
@@ -14,7 +15,7 @@ from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from . import settings
+from . import csrf, settings
 from .emails import send_mail
 from .forms import SendEmailForm
 from .log import logger
@@ -113,6 +114,31 @@ async def auth(request: Request) -> Response:
     return response
 
 
+def get_send_email_response(
+    request: Request,
+    host_name: str,
+    errors: list[dict[str, Any]] | None = None,
+    http_status_code: HTTPStatus = HTTPStatus.OK,
+) -> Response:
+    csrf_token, signed_csrf_token = csrf.get_token()
+    context = {"request": request, "host_name": host_name, "csrf_token": csrf_token}
+    if errors:
+        context["errors"] = errors
+    response = templates.TemplateResponse(
+        "send_email.html", context, status_code=http_status_code
+    )
+    response.set_cookie(
+        key=csrf.CSRF_COOKIE_NAME,
+        value=signed_csrf_token,
+        max_age=csrf.CSRF_COOKIE_MAX_AGE,
+        expires=csrf.CSRF_COOKIE_MAX_AGE,
+        domain=settings.COOKIE_DOMAIN,
+        secure=settings.COOKIE_SECURE,
+        httponly=True,
+    )
+    return response
+
+
 async def handle_send_email(
     request: Request, forward_headers: ForwardHeaders
 ) -> Response:
@@ -120,16 +146,19 @@ async def handle_send_email(
     try:
         form = SendEmailForm.parse_obj(data)
     except ValidationError as exc:
-        logger.debug("auth.send_email_form.invalid", exc_info=True)
-        return templates.TemplateResponse(
-            "send_email.html",
-            {
-                "request": request,
-                "host_name": forward_headers.host_name,
-                "errors": exc.errors(),
-            },
-            status_code=HTTPStatus.BAD_REQUEST,
+        logger.debug("handle_send_email.form.invalid", exc_info=True)
+        return get_send_email_response(
+            request,
+            host_name=forward_headers.host_name,
+            errors=exc.errors(),
+            http_status_code=HTTPStatus.BAD_REQUEST,
         )
+
+    if not csrf.does_token_match(
+        form.csrf_token, request.cookies.get(csrf.CSRF_COOKIE_NAME, "")
+    ):
+        logger.warning("handle_send_email.csrf.invalid")
+        return HTMLResponse("", status_code=HTTPStatus.FORBIDDEN)
 
     email_task = None
     if form.has_allowed_email:
@@ -142,7 +171,7 @@ async def handle_send_email(
             link=request.url_for("verify", signature=auth_signature.signature),
             host_name=forward_headers.host_name,
         )
-        logger.debug("auth.send_verification_email")
+        logger.debug("handle_send_email.send_verification_email")
 
     response = templates.TemplateResponse(
         "email_sent.html",
@@ -152,6 +181,7 @@ async def handle_send_email(
         background=email_task,  # type: ignore[arg-type]
     )
     response.delete_cookie(settings.AUTH_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
+    response.delete_cookie(csrf.CSRF_COOKIE_NAME, domain=settings.COOKIE_DOMAIN)
     return response
 
 
@@ -170,17 +200,11 @@ async def send(request: Request) -> Response:
 
     # Should only raise if access-guard has been configured incorrectly
     assert request.base_url.netloc == settings.DOMAIN
-    if request.method == "POST":
-        # TODO: CSRF
-        response = await handle_send_email(request, forward_headers)
-    else:
-        response = templates.TemplateResponse(
-            "send_email.html",
-            {"request": request, "host_name": forward_headers.host_name},
-            status_code=HTTPStatus.OK,
-        )
-
-    return response
+    return (
+        await handle_send_email(request, forward_headers)
+        if request.method == "POST"
+        else get_send_email_response(request, host_name=forward_headers.host_name)
+    )
 
 
 async def verify(request: Request) -> Response:
