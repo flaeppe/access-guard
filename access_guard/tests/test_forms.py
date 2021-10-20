@@ -7,7 +7,9 @@ from ..forms import SendEmailForm
 class TestSendEmailForms:
     def test_raises_validation_error_with_invalid_email(self) -> None:
         with pytest.raises(ValidationError) as exc:
-            SendEmailForm.parse_obj({"email": "!@dlkfjs@email.com"})
+            SendEmailForm.parse_obj(
+                {"email": "!@dlkfjs@email.com", "csrf_token": "something"}
+            )
 
         assert exc.value.errors() == [
             {

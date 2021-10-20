@@ -40,8 +40,12 @@ async def api_client() -> AsyncGenerator[TestClient, None]:
 
 
 @pytest.fixture(scope="function")
-def auth_cookie_set() -> RequestsCookieJar:
-    cookie_jar = RequestsCookieJar()
+def cookie_jar() -> RequestsCookieJar:
+    return RequestsCookieJar()
+
+
+@pytest.fixture(scope="function")
+def auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
@@ -53,8 +57,7 @@ def auth_cookie_set() -> RequestsCookieJar:
 
 
 @pytest.fixture(scope="function")
-def expired_auth_cookie_set() -> RequestsCookieJar:
-    cookie_jar = RequestsCookieJar()
+def expired_auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
         value=ForwardHeadersFactory.create().encode(),
@@ -64,6 +67,21 @@ def expired_auth_cookie_set() -> RequestsCookieJar:
         rest={"HttpOnly": True},
     )
     return cookie_jar
+
+
+@pytest.fixture(scope="function")
+def csrf_token(cookie_jar: RequestsCookieJar) -> tuple[str, RequestsCookieJar]:
+    from access_guard import csrf
+
+    raw, signed = csrf.get_token()
+    cookie_jar.set(
+        name=csrf.CSRF_COOKIE_NAME,
+        value=signed,
+        domain=settings.COOKIE_DOMAIN,
+        secure=False,
+        rest={"HttpOnly": True},
+    )
+    return raw, cookie_jar
 
 
 @pytest.fixture(scope="session")

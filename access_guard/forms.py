@@ -6,6 +6,7 @@ from .validators import DisallowedEmail, check_email_is_allowed
 
 class SendEmailForm(BaseModel):
     email: EmailStr
+    csrf_token: str
 
     # It's a bit sad that pydantic doesn't accept `str.lower` directly as validator..
     _normalize_email = validator("email", always=True)(lambda value: value.lower())

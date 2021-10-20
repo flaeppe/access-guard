@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any, NamedTuple, Sequence
 
-from itsdangerous.url_safe import URLSafeTimedSerializer
+from itsdangerous.url_safe import URLSafeSerializer, URLSafeTimedSerializer
 from starlette.config import Config
 from starlette.datastructures import Secret
 
@@ -51,6 +51,7 @@ DEBUG: bool = config("debug", cast=bool, default=False)
 
 class Signers(NamedTuple):
     timed: URLSafeTimedSerializer
+    url_safe: URLSafeSerializer
     separator: str
 
 
@@ -58,6 +59,11 @@ SIGNING = Signers(
     timed=URLSafeTimedSerializer(
         str(SECRET),
         salt="access_guard.signing.timed",
+        signer_kwargs={"sep": ".", "digest_method": hashlib.sha256},
+    ),
+    url_safe=URLSafeSerializer(
+        str(SECRET),
+        salt="access_guard.signing.url_safe",
         signer_kwargs={"sep": ".", "digest_method": hashlib.sha256},
     ),
     separator=".",
