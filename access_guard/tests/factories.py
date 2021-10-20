@@ -2,7 +2,7 @@ from typing import Any
 
 import factory
 
-from ..server import ForwardHeaders
+from ..schema import ForwardHeaders
 
 
 class ForwardHeadersFactory(factory.Factory):

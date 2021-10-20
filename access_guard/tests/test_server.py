@@ -14,7 +14,7 @@ from .. import csrf, settings
 from ..schema import AuthSignature, ForwardHeaders
 from .factories import ForwardHeadersFactory
 
-mock_send_mail = mock.patch("access_guard.server.send_mail", autospec=True)
+mock_send_mail = mock.patch("access_guard.routes.send.send_mail", autospec=True)
 mock_time_signer_loads = mock.patch.object(
     settings.SIGNING.timed, "loads", autospec=True
 )
