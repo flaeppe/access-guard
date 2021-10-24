@@ -5,3 +5,4 @@ starlette>=0.16
 uvicorn>=0.15
 aiosmtplib>=1.1
 pydantic[email]>=1.8
+structlog>=21.2

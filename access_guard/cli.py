@@ -329,8 +329,8 @@ def healthcheck() -> bool:
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(_check_smtp())
-    except HealthcheckFailed as exc:
-        logger.critical(str(exc), exc_info=True)
+    except HealthcheckFailed:
+        logger.critical("healthcheck.failed", exc_info=True)
         return False
 
     logger.info("healthcheck.success")

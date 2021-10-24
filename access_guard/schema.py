@@ -86,8 +86,7 @@ class Decodable(DecodableParent):
             return None
 
         if not isinstance(loaded, abc.MutableMapping):
-            # TODO: Log received type (type=type(loaded))
-            logger.error("decodable.decode.payload_type_invalid")
+            logger.error("decodable.decode.payload_type_invalid", type=type(loaded))
             return None
         return loaded
 
@@ -136,7 +135,7 @@ class AuthSignature(Decodable, BaseModel):
             decoded = super().decode(signature)
         except SignatureExpired as exc:
             date_signed = exc.date_signed.isoformat() if exc.date_signed else "--"
-            logger.info("auth_signature.decode.expired %s", date_signed)
+            logger.info("auth_signature.decode.expired", date_signed=date_signed)
             raise AuthSignatureExpired from exc
 
         if decoded is not None:
