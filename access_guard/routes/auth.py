@@ -59,7 +59,11 @@ def get_forward_headers(request: Request) -> ForwardHeaders | None:
         try:
             forward_headers = ForwardHeaders.parse_obj(request.headers)
         except ValidationError:
-            logger.warning("get_forward_headers.invalid_headers", exc_info=True)
+            logger.warning(
+                "get_forward_headers.invalid_headers",
+                headers=request.headers,
+                exc_info=True,
+            )
 
     return forward_headers
 

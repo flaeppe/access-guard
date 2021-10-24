@@ -9,6 +9,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import settings
+from .log import LOGGING_CONFIG
 from .routes.auth import auth
 from .routes.send import send
 from .routes.verify import verify
@@ -31,12 +32,7 @@ app = Starlette(routes=routes, middleware=middleware, debug=settings.DEBUG)
 
 def run() -> None:
     import uvicorn
-    from uvicorn.config import LOGGING_CONFIG
 
-    LOGGING_CONFIG["loggers"]["access-guard"] = {
-        "handlers": ["default"],
-        "level": "DEBUG" if settings.DEBUG else "INFO",
-    }
     uvicorn.run(
         app,
         host=settings.HOST,
