@@ -21,7 +21,7 @@ services:
       traefik.http.routers.api.service: "api@internal"
 
   whoami:
-    image: containous/whoami
+    image: traefik/whoami
     labels:
       traefik.enable: "true"
       traefik.http.routers.whoami.rule: "Host(`whoami.localhost.com`)"

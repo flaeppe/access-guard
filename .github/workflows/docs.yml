@@ -1,0 +1,32 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Pip cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-docs-${{ hashFiles('docs/reqs/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-docs-
+      - name: Build
+        run: |
+          pip install -r docs/reqs/requirements.txt
+      - name: Publish
+        if: github.repository_owner == 'flaeppe'
+        run: |
+          git config user.email ${{ secrets.GITHUB_TOKEN }}
+          git remote set-url origin https://${{ secrets.GITHUB_USER }}:${{ secrets.GITHUB_PAGES_TOKEN }}@github.com/flaeppe/access-guard.git
+          mkdocs gh-deploy --force

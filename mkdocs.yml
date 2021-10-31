@@ -1,0 +1,41 @@
+site_name: Access guard
+site_description: A forward authentication service that provides email verification.
+site_url: https://flaeppe.github.io/access-guard/
+
+theme:
+  name: material
+  palette:
+    primary: "teal"
+    accent: "blue"
+  features:
+    - content.code.annotate
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - toc.integrate
+
+repo_name: flaeppe/access-guard
+repo_url: https://github.com/flaeppe/access-guard
+edit_uri: ""
+
+nav:
+  - Introduction: "index.md"
+  - Usage:
+    - How it works: "how_it_works.md"
+    - Use with traefik's forward auth: "traefik.md"
+  - Reference: "reference.md"
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/flaeppe/access-guard
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - def_list

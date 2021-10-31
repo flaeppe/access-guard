@@ -2,335 +2,68 @@
 
 A forward authentication service that provides email verification.
 
-## Contents
+## Documentation
 
-- [Prerequisites](#prerequisites)
-- [Usage](#usage)
-  - [traefik](#traefik)
-  - [Command line arguments](#command-line-arguments)
-  - [Arguments reference](#arguments-reference)
-    - [Required arguments](#required-arguments)
-    - [Optional arguments](#optional-arguments)
-- [Bleeding edge image](#bleeding-edge-image)
-- [Contributing](#contributing)
-  - [Build image](#build-image)
-  - [Running tests](#running-tests)
-  - [Linting](#linting)
-  - [Static typing](#static-typing)
-  - [Coverage](#coverage)
-  - [Upgrade/change requirements](#upgradechange-requirements)
+You can find the complete documentation of access-guard at
+[flaeppe.github.io/access-guard](https://flaeppe.github.io/access-guard).
 
-## Prerequisites
+## Quickstart
 
-You will need an SMTP server that Access guard can configure its SMTP client
-to send its verification emails.
+A simple use case with a protected [whoami](https://github.com/traefik/whoami) service
 
-## Usage
+```yaml
+version: "3.8"
 
-### traefik
+services:
+  traefik:
+    image: traefik:v2.5
+    command: |
+      --providers.docker
+      --providers.docker.exposedByDefault=false
+      --log.level=INFO
+      --accesslog=true
+      --entryPoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
-View [docker-compose.yml](https://github.com/flaeppe/access-guard/blob/master/docker-compose.yml)
-to see a configuration example with [traefik's forward auth](https://doc.traefik.io/traefik/middlewares/http/forwardauth/)
+  whoami:
+    image: traefik/whoami
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.whoami.rule: "Host(`whoami.localhost.com`)"
+      traefik.http.routers.whoami.middlewares: "access-guard@docker"
 
-### Command line arguments
+  access-guard:
+    image: ghcr.io/flaeppe/access-guard
+    command: [
+      ".*@test\\.com$$",
+      "--secret", "supersecret",
+      "--auth-host", "access-guard.localhost.com",
+      "--trusted-hosts", "access-guard", "access-guard.localhost.com",
+      "--cookie-domain", "localhost.com",
+      "--email-host", "mailhog",
+      "--email-port", "1025",
+      "--from-email", "access-guard@local.com"
+      ]
+    depends_on:
+      - mailhog
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.access-guard.rule: "Host(`access-guard.localhost.com`)"
+      traefik.http.routers.access-guard.service: "access-guard"
+      traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/auth"
+      traefik.http.services.access-guard.loadbalancer.server.port: "8585"
 
-```console
-$ docker run --rm ghcr.io/flaeppe/access-guard:latest --help
-usage: access-guard [-h] -s SECRET -a AUTH_HOST -t TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d] [--host HOST] [--port PORT] --email-host EMAIL_HOST --email-port EMAIL_PORT --from-email FROM_EMAIL [--email-username EMAIL_USERNAME]
-                    [--email-password EMAIL_PASSWORD] [--email-use-tls | --email-start-tls] [--email-validate-certs] [--email-client-cert EMAIL_CLIENT_CERT] [--email-client-key EMAIL_CLIENT_KEY] [--email-subject EMAIL_SUBJECT] [--cookie-secure]
-                    [--auth-cookie-name AUTH_COOKIE_NAME] [--verified-cookie-name VERIFIED_COOKIE_NAME] [--auth-cookie-max-age AUTH_COOKIE_MAX_AGE] [--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE] [--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE]
-                    EMAIL_PATTERN [EMAIL_PATTERN ...]
-
-...
-
-positional arguments:
-  EMAIL_PATTERN         Email addresses to match, each compiled to a regex
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -V, --version         show program's version number and exit
-  -d, --debug
-  --host HOST           Server host. [default: 0.0.0.0]
-  --port PORT           Server port. [default: 8585]
-
-Required arguments:
-  -s SECRET, --secret SECRET
-                        Secret key
-  -sf PATH_TO_FILE, --secret-file PATH_TO_FILE
-                        Secret key file
-  -a AUTH_HOST, --auth-host AUTH_HOST
-                        The entrypoint domain name for access guard (without protocol or path)
-  -t TRUSTED_HOST [TRUSTED_HOST ...], --trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]
-                        Hosts/domain names that access guard should serve. Matched against a request's Host header. Wildcard domains such as '*.example.com' are supported for matching subdomains. To allow any hostname use: *
-  -c COOKIE_DOMAIN, --cookie-domain COOKIE_DOMAIN
-                        The domain to use for cookies. Ensure this value covers domain set for AUTH_HOST
-
-Required email arguments:
-  SMTP/Email specific configuration
-
-  --email-host EMAIL_HOST
-                        The host to use for sending emails
-  --email-port EMAIL_PORT
-                        Port to use for the SMTP server defined in --email-host
-  --from-email FROM_EMAIL
-                        What will become the sender's address in sent emails
-
-Optional email arguments:
-  SMTP/Email specific configuration
-
-  --email-username EMAIL_USERNAME
-                        Username to login with on configured SMTP server [default: unset]
-  --email-password EMAIL_PASSWORD
-                        Password to login with on configured SMTP server [default: unset]
-  --email-password-file PATH_TO_FILE
-                        File containing password to login with on configured SMTP server [default: unset]
-  --email-use-tls       Make the _initial_ connection to the SMTP server over TLS/SSL [default: false]
-  --email-start-tls     Make the initial connection to the SMTP server over plaintext, and then upgrade the connection to TLS/SSL [default: false]
-  --email-no-validate-certs
-                        Disable validating server certificates for SMTP [default: false]
-  --email-client-cert EMAIL_CLIENT_CERT
-                        Path to client side certificate, for TLS verification [default: unset]
-  --email-client-key EMAIL_CLIENT_KEY
-                        Path to client side key, for TLS verification [default: unset]
-  --email-subject EMAIL_SUBJECT
-                        Subject of the email sent for verification [default: Access guard verification]
-
-Optional cookie arguments:
-  Configuration for cookies
-
-  --cookie-secure       Whether to only use secure cookies. When passed, cookies will be marked as 'secure' [default: false]
-  --auth-cookie-name AUTH_COOKIE_NAME
-                        Name for cookie used during auth flow [default: access-guard-forwarded]
-  --verified-cookie-name VERIFIED_COOKIE_NAME
-                        Name for cookie set when auth completed successfully [default: access-guard-session]
-  --auth-cookie-max-age AUTH_COOKIE_MAX_AGE
-                        Seconds before the cookie set _during_ auth flow should expire [default: 3600 (1 hour)]
-  --auth-signature-max-age AUTH_SIGNATURE_MAX_AGE
-                        Decides how many seconds a verification email should be valid. When the amount of seconds has passed, the client has to request a new email. [default: 600 (10 minutes)]
-  --verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE
-                        Decides how many seconds a verified session cookie should be valid. When the amount of seconds has passed, the client has to verify again. [default: 86400 (24 hours)]
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
 ```
 
-### Arguments reference
-
-#### Required arguments:
-
-- `EMAIL_PATTERN [EMAIL_PATTERN ...]` (positional)
-
-  Email address patterns to match for being allowed possibility to verify and access.
-
-  All entered patterns are case insensitively matched with emails entered by a client.
-
-  Example:
-
-  ```
-  *@email.com someone@else.com
-  ```
-
-- `-s/--secret SECRET`
-
-  Should be set to a unique, unpredictable value. Is used for cryptographic signing.
-
-  Both `--secret` and `--secret-file` can _not_ be passed at the same time
-
-- `-sf/--secret-file PATH_TO_FILE`
-
-  As an alternative to passing the secret via command line, the value can be loaded
-  from a file present in the container. For example:
-
-  ```
-  --secret-file /run/secrets/access-guard-secret
-  ```
-
-  Only the _first line_ of the secret file will be read and any newline character at
-  the end of it will be removed. If the first line is _empty_ after any newline
-  character has been removed, an error will be raised.
-
-  Both `--secret-file` and `--secret` can _not_ be passed at the same time.
-
-- `-a/--auth-host AUTH_HOST`
-
-  The configured domain name for the access guard service, without protocol or path. The service
-  wants to know this to redirect unverified clients in to the verification flow.
-
-  Example:
-
-  ```
-  --auth-host auth.localhost.com
-  ```
-
-- `-t/--trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]`
-
-  Hosts/domain names that access guard should serve. Matched against a requests's `Host` header.
-  Wildcard domains are supported for matching subdomains. Remember that for usage with docker
-  and traefik, the _name_ of the access guard service could be a trusted host. That'll allow
-  the `forwardauth` middleware to configure an address resolved via a docker network.
-  For example (via label/docker configuration):
-
-  ```
-  traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/auth"
-  ```
-
-  Examples:
-
-  ```
-  --trusted-hosts access-guard auth.localhost.com
-  ```
-
-  To allow multiple subdomains:
-
-  ```
-  --trusted-hosts *.localhost.com
-  ```
-
-  To allow any hostname, use:
-
-  ```
-  --trusted-hosts *
-  ```
-
-- `-c/--cookie-domain COOKIE_DOMAIN`
-
-  The domain to use for cookies. Ensure this value covers domain set for `--auth-host`.
-
-  With an auth host configuration of:
-
-  ```
-  --auth-host auth.localhost.com
-  ```
-
-  We can set a cookie domain configuration like
-
-  ```
-  --cookie-domain localhost.com
-  ```
-
-  That'll allow a verification cookie to follow along to protected services like:
-
-  ```
-  service_1.localhost.com
-  service_2.localhost.com
-  ```
-
-- `--email-host EMAIL_HOST`
-
-  The host to use for sending of emails
-
-  Example:
-
-  ```
-  --email-host 172.18.0.1
-  ```
-
-- `--email-port EMAIL_PORT`
-
-  Port to use for the SMTP server defined in `--email-host`
-
-  Example:
-
-  ```
-  --email-port 25
-  ```
-
-- `--from-email FROM_EMAIL`
-
-  What will become the sender's address in sent emails.
-
-  ```
-  --from-email verificator@email.com
-  ```
-
-#### Optional arguments:
-
-- `--host HOST` [default: 0.0.0.0]
-
-  The socket that access guard's server should bind to. This will be _inside_ of a
-  running container.
-
-- `--port PORT` [default: 8585]
-
-  The port that access guard's server should bind to. This will be _inside_ of a
-  running container.
-
-- `--email-username EMAIL_USERNAME` [default: unset]
-
-  Username to login with on configured SMTP server
-
-- `--email-password EMAIL_PASSWORD` [default: unset]
-
-  Password to login with on configured SMTP server
-
-  Both `--email-password` and `--email-password-file` can _not_ be passed at the same
-  time
-
-- `--email-password-file PATH_TO_FILE` [default: unset]
-
-  As an alternative to passing a password via command line, the value can be loaded
-  from a file present in the container. For example:
-
-  ```
-  --email-password-file /run/secrets/email-passwd
-  ```
-
-  Only the _first line_ of the password file will be read and any newline character at
-  the end of it will be removed. If the first line is _empty_ after any newline
-  character has been removed, an error will be raised.
-
-  Both `--email-password-file` and `--email-password` can _not_ be passed at the same
-  time
-
-- `--email-use-tls` [default: false]
-
-  Make the _initial_ connection to the SMTP server over TLS/SSL.
-  Both `--email-use-tls` and `--email-start-tls` can _not_ be passed at the same time
-
-- `--email-start-tls` [default: false]
-
-  Make the initial connection to the SMTP server over plaintext, and then upgrade the
-  connection to TLS/SSL.
-  Both `--email-start-tls` and `--email-use-tls` can _not_ be passed at the same time
-
-- `--email-no-validate-certs` [default: false]
-
-  Disable validating server certificates for SMTP
-
-- `--email-client-cert EMAIL_CLIENT_CERT` [default: unset]
-
-  Path to client side certificate, for TLS verification
-
-- `--email-client-key EMAIL_CLIENT_KEY` [default: unset]
-
-  Path to client side key, for TLS verification
-
-- `--email-subject EMAIL_SUBJECT` [default: Access guard verification]
-
-  Subject of the email sent for verification
-
-- `--cookie-secure` [default: false]
-
-  Whether to only use secure cookies. When passed, cookies will be marked as 'secure'
-
-- `--auth-cookie-name AUTH_COOKIE_NAME` [default: access-guard-forwarded]
-
-  Name for cookie used during auth flow
-
-- `--verified-cookie-name VERIFIED_COOKIE_NAME` [default: access-guard-session]
-
-  Name for cookie set when auth completed successfully
-
-- `--auth-cookie-max-age AUTH_COOKIE_MAX_AGE` [default: 3600 (1 hour)]
-
-  Seconds before the cookie set _during_ auth flow should expire
-
-- `--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE` [default: 600 (10 minutes)]
-
-  Decides how many seconds a verification email should be valid. When the amount of
-  seconds has passed, the client has to request a new email.
-
-- `--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE` [default: 86400 (24 hours)]
-
-  Decides how many seconds a verified session cookie should be valid. When the amount
-  of seconds has passed, the client has to verify again.
+A more in depth description of this example can be found in
+[the documentation](https://flaeppe.github.io/access-guard/traefik/).
 
 ## Bleeding edge image
 
@@ -390,4 +123,24 @@ the following command
 
 ```sh
 make requirements
+```
+
+### Docs
+
+The documentation can be built locally and served on `localhost:8000` with the
+following command
+
+```sh
+make serve-docs
+```
+
+If `make sync-local-requirements` is run before this command, all necessary
+requirements have been installed
+
+### Install
+
+Install requirements locally (tip: prepare and activate a virtualenv before installing)
+
+```sh
+make sync-local-requirements
 ```

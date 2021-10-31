@@ -6,9 +6,13 @@ DOCKER_DEV_IMAGE := access-guard
 DOCKER_RUN := docker-compose run --rm --user="root" --workdir="/app" --entrypoint= $(DOCKER_DEV_IMAGE)
 
 
-.PHONY: requirements
-requirements:
+.PHONY: pre-requirements
+pre-requirements:
 	python3 -m pip install --upgrade wheel
+
+
+.PHONY: requirements
+requirements: pre-requirements
 	pip-compile \
 		--upgrade --generate-hashes \
 		--output-file reqs/requirements.txt \
@@ -19,6 +23,14 @@ requirements:
 		reqs/dev-requirements.in
 
 
+.PHONY: docs-requirements
+docs-requirements: pre-requirements
+	pip-compile \
+		--upgrade --generate-hashes \
+		--output-file docs/reqs/requirements.txt \
+		docs/reqs/requirements.in
+
+
 .PHONY: sync-local-requirements
 sync-local-requirements:
 	pip install \
@@ -26,7 +38,8 @@ sync-local-requirements:
 		pip-tools==$$(cat Dockerfile | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
 	pip-sync \
 		reqs/requirements.txt \
-		reqs/dev-requirements.txt
+		reqs/dev-requirements.txt \
+		docs/reqs/requirements.txt
 
 
 .PHONY: build
@@ -46,3 +59,8 @@ test:
 .PHONY: mypy
 mypy:
 	@$(DOCKER_RUN) mypy --config-file pyproject.toml $(mypy)
+
+
+.PHONY: serve-docs
+serve-docs:
+	mkdocs serve
