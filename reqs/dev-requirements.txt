@@ -286,7 +286,9 @@ urllib3==1.26.7 \
     --hash=sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece \
     --hash=sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844
     # via requests
-virtualenv==20.10.0 \
-    --hash=sha256:4b02e52a624336eece99c96e3ab7111f469c24ba226a53ec474e8e787b365814 \
-    --hash=sha256:576d05b46eace16a9c348085f7d0dc8ef28713a2cabaa1cf0aea41e8f12c9218
-    # via pre-commit
+virtualenv==20.9.0 \
+    --hash=sha256:1d145deec2da86b29026be49c775cc5a9aab434f85f7efef98307fb3965165de \
+    --hash=sha256:bb55ace18de14593947354e5e6cd1be75fb32c3329651da62e92bf5d0aab7213
+    # via
+    #   -r reqs/dev-requirements.in
+    #   pre-commit
