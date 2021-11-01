@@ -13,8 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PATH="/app/venv/bin:$PATH"
 
 # Pinned versions
-ENV PIP_PIP_VERSION 21.2.4
-ENV PIP_PIP_TOOLS_VERSION 6.2.0
+ENV PIP_PIP_VERSION 21.3.1
+ENV PIP_PIP_TOOLS_VERSION 6.4.0
 
 # Setup virtualenv
 RUN python -m venv /app/venv
