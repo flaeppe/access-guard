@@ -10,3 +10,6 @@ types-requests>=2.25
 factory-boy>=3.2
 
 pre-commit
+
+# TODO: Unpin once >=20.10 can be found for CI running on master(?!)
+virtualenv==20.9
