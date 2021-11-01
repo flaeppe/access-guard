@@ -8,3 +8,5 @@ mypy>=0.910
 types-requests>=2.25
 
 factory-boy>=3.2
+
+pre-commit
