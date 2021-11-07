@@ -14,14 +14,17 @@ from .environ import environ
 config = Config(environ=environ)
 
 
-def as_regex_patterns(str_patterns: Sequence[Any]) -> Sequence[re.Pattern]:
+def as_regex_patterns(str_patterns: Sequence[Any]) -> Sequence[re.Pattern[str]]:
     return tuple(
         (re.compile(pattern) if not isinstance(pattern, re.Pattern) else pattern)
         for pattern in str_patterns
     )
 
 
-EMAIL_PATTERNS: Sequence[re.Pattern] = config("email_patterns", cast=as_regex_patterns)
+# TODO: Fix 'cast' call overload (expects type)
+EMAIL_PATTERNS: Sequence[re.Pattern[str]] = config(  # type: ignore[call-overload]
+    "email_patterns", cast=as_regex_patterns
+)
 SECRET: Secret = config("secret", cast=Secret)
 DOMAIN: str = config("auth_host", cast=str)
 TRUSTED_HOSTS: tuple[str, ...] = config("trusted_hosts", cast=tuple)

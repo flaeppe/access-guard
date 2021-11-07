@@ -1,15 +1,14 @@
-httpx>=0.19
-requests>=2.26
-pytest>=6.2
-pytest-asyncio>=0.15
-pytest-cov>=3.0
+httpx
+requests
+pytest
+pytest-asyncio
+pytest-cov
 
-mypy>=0.910
-types-requests>=2.25
+mypy
+types-requests
 
-factory-boy>=3.2
+factory-boy
 
 pre-commit
 
-# TODO: Unpin once >=20.10 can be found for CI running on master(?!)
-virtualenv==20.9
+virtualenv
