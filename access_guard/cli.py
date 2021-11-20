@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from aiosmtplib.errors import SMTPException
+from starlette.datastructures import URL
 
 from .log import logger
 
@@ -33,6 +34,21 @@ def command(argv: list[str] | None = None) -> None:
 
 def lowercase_regex_pattern(pattern: str) -> re.Pattern:
     return re.compile(f"{pattern.lower()}")
+
+
+def parse_url(value: str) -> URL:
+    url = URL(value)
+    if url.scheme not in {"http", "https"}:
+        raise argparse.ArgumentTypeError(
+            f"Protocol needs to be either 'http' or 'https', got: '{url.scheme}'"
+        )
+    elif not url.netloc:
+        raise argparse.ArgumentTypeError(f"{value} is missing a domain")
+    elif not url.path.endswith("/"):
+        # We normalize so that we can make better assumptions when joining
+        url = url.replace(path=url.path + "/")
+
+    return url
 
 
 def parse_argv(argv: list[str]) -> argparse.Namespace:
@@ -75,9 +91,9 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         "-a",
         "--auth-host",
         required=True,
-        type=str,
+        type=parse_url,
         dest="auth_host",
-        help="The entrypoint domain name for access guard (without protocol or path)",
+        help="The entrypoint url for access guard, with protocol and path",
     )
     required.add_argument(
         "-t",
