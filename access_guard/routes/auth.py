@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+from urllib.parse import urljoin
 
 from pydantic.error_wrappers import ValidationError
 from starlette.requests import Request
@@ -70,10 +71,13 @@ def get_forward_headers(request: Request) -> ForwardHeaders | None:
 
 def start_verification_response(forward_headers: ForwardHeaders) -> RedirectResponse:
     response = RedirectResponse(
-        url=f"{forward_headers.proto}://{settings.DOMAIN}/send",
+        url=settings.AUTH_HOST.replace(
+            scheme=forward_headers.proto, path=urljoin(settings.AUTH_HOST.path, "send")
+        ),
         status_code=HTTPStatus.SEE_OTHER,
     )
     set_auth_cookie(response, value=forward_headers.encode())
+    logger.info("start_verification_response", forward_headers=forward_headers.dict())
     return response
 
 

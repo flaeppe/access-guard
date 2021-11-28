@@ -15,13 +15,23 @@ from .routes.send import send
 from .routes.verify import verify
 
 routes = [
-    Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
-    Route("/send", endpoint=send, methods=["GET", "POST"], name="send"),
-    Route("/verify/{signature:str}", endpoint=verify, methods=["GET"], name="verify"),
     Mount(
-        "/static",
-        app=StaticFiles(directory=str(Path(__file__).parent / "static")),
-        name="static",
+        settings.AUTH_HOST.path,
+        routes=[
+            Route("/auth", endpoint=auth, methods=["GET", "POST"], name="auth"),
+            Route("/send", endpoint=send, methods=["GET", "POST"], name="send"),
+            Route(
+                "/verify/{signature:str}",
+                endpoint=verify,
+                methods=["GET"],
+                name="verify",
+            ),
+            Mount(
+                "/static",
+                app=StaticFiles(directory=str(Path(__file__).parent / "static")),
+                name="static",
+            ),
+        ],
     ),
 ]
 middleware = [
@@ -30,7 +40,7 @@ middleware = [
 app = Starlette(routes=routes, middleware=middleware, debug=settings.DEBUG)
 
 
-def run() -> None:
+def run() -> None:  # pragma: no cover
     import uvicorn
 
     uvicorn.run(

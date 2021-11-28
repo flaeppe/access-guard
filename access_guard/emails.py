@@ -1,6 +1,7 @@
 from email.message import EmailMessage
 
 import aiosmtplib
+from starlette.datastructures import URL
 
 from . import settings
 from .templating import templates
@@ -20,7 +21,7 @@ def get_connection() -> aiosmtplib.SMTP:
     )
 
 
-async def send_mail(email: str, link: str, host_name: str) -> None:
+async def send_mail(email: str, link: URL, host_name: str) -> None:
     message = EmailMessage()
     message["From"] = settings.FROM_EMAIL
     message["To"] = email
@@ -28,7 +29,7 @@ async def send_mail(email: str, link: str, host_name: str) -> None:
     template = templates.get_template("verification_email.txt")
     message.set_content(
         template.render(
-            link=link,
+            link=str(link),
             requested_service=host_name,
             link_valid_minutes=settings.AUTH_SIGNATURE_MAX_AGE // 60,
         )

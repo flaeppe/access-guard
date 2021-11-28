@@ -1,8 +1,8 @@
 from typing import AsyncGenerator
-from unittest import mock
 
 import pytest
 from requests.cookies import RequestsCookieJar
+from starlette.datastructures import URL
 from starlette.testclient import TestClient
 
 # Set test environment. Important that we touch this before any other application
@@ -13,7 +13,7 @@ environ.load(  # noqa
     {
         "email_patterns": (".*@test.com",),
         "secret": "supersecret",
-        "auth_host": "auth.testserver.local",
+        "auth_host": URL("http://auth.testserver.local/"),
         "trusted_hosts": ("auth.testserver.local",),
         "cookie_domain": "testserver.local",
         "cookie_secure": False,
@@ -26,17 +26,19 @@ environ.load(  # noqa
     }
 )
 
-from .. import server, settings  # noqa: E402
+from .. import settings  # noqa: E402
 from ..schema import AuthSignature  # noqa: E402
 from .factories import ForwardHeadersFactory  # noqa: E402
 
 
 @pytest.fixture(scope="function")
 async def api_client() -> AsyncGenerator[TestClient, None]:
-    with mock.patch("uvicorn.run", autospec=True):
-        server.run()
-        with TestClient(server.app, base_url=f"http://{settings.DOMAIN}") as client:
-            yield client
+    from .. import server
+
+    with TestClient(
+        server.app, base_url=f"http://{settings.AUTH_HOST.netloc}"
+    ) as client:
+        yield client
 
 
 @pytest.fixture(scope="function")

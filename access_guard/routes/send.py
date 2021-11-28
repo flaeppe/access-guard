@@ -38,7 +38,7 @@ async def send(request: Request) -> Response:
         return HTMLResponse(status_code=HTTPStatus.UNAUTHORIZED)
 
     # Should only raise if access-guard has been configured incorrectly
-    assert request.base_url.netloc == settings.DOMAIN
+    assert request.base_url.netloc == settings.AUTH_HOST.netloc
     return (
         await _handle_send_email(request, forward_headers)
         if request.method == "POST"

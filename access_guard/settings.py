@@ -7,7 +7,7 @@ from typing import Any, NamedTuple, Sequence
 
 from itsdangerous.url_safe import URLSafeSerializer, URLSafeTimedSerializer
 from starlette.config import Config
-from starlette.datastructures import Secret
+from starlette.datastructures import URL, Secret
 
 from .environ import environ
 
@@ -21,12 +21,15 @@ def as_regex_patterns(str_patterns: Sequence[Any]) -> Sequence[re.Pattern[str]]:
     )
 
 
-# TODO: Fix 'cast' call overload (expects type)
+# Mypy doesn't accept a Callable. See: https://github.com/encode/starlette/pull/1378
 EMAIL_PATTERNS: Sequence[re.Pattern[str]] = config(  # type: ignore[call-overload]
     "email_patterns", cast=as_regex_patterns
 )
 SECRET: Secret = config("secret", cast=Secret)
-DOMAIN: str = config("auth_host", cast=str)
+# Mypy doesn't accept a Callable. See: https://github.com/encode/starlette/pull/1378
+AUTH_HOST: URL = config(  # type: ignore[call-overload]
+    "auth_host", cast=lambda value: value if isinstance(value, URL) else URL(value)
+)
 TRUSTED_HOSTS: tuple[str, ...] = config("trusted_hosts", cast=tuple)
 # TODO: AUTH_TOKEN = config("auth_token", cast=Secret)
 COOKIE_DOMAIN: str = config("cookie_domain", cast=str)

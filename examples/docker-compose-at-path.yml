@@ -25,48 +25,33 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.whoami.rule: "Host(`whoami.localhost.com`)"
+      traefik.http.routers.whoami.priority: "1"
       traefik.http.routers.whoami.middlewares: "access-guard@docker"
 
   access-guard:
     image: access-guard
-    build:
-      context: .
-      target: dev
-      args:
-        - BASE_IMAGE=access-guard:base
     command: [
       ".*@test\\.com$$",
       "--secret", "supersecret",
-      "--auth-host", "http://access-guard.localhost.com/",
-      "--trusted-hosts", "access-guard", "access-guard.localhost.com",
+      # Match the --auth-host value with the traefik rule
+      "--auth-host", "http://whoami.localhost.com/access-guard/",
+      "--trusted-hosts", "access-guard", "whoami.localhost.com",
       "--cookie-domain", "localhost.com",
       "--email-host", "mailhog",
       "--email-port", "1025",
       "--from-email", "access-guard@local.com"
       ]
-    stdin_open: true
-    tty: true
     depends_on:
       - mailhog
-    ports:
-      - "8585:8585"
-    volumes:
-      - ./access_guard:/app/access_guard:cached
-      - ./setup.cfg:/app/setup.cfg
-      - ./pyproject.toml:/app/pyproject.toml
-      - mypy_cache:/app/.mypy_cache
     labels:
       traefik.enable: "true"
-      traefik.http.routers.access-guard.rule: "Host(`access-guard.localhost.com`)"
+      traefik.http.routers.access-guard.rule: "Host(`whoami.localhost.com`) && PathPrefix(`/access-guard/`)"
+      traefik.http.routers.access-guard.priority: "9999"
       traefik.http.routers.access-guard.service: "access-guard"
-      traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/auth"
+      traefik.http.middlewares.access-guard.forwardauth.address: "http://access-guard:8585/access-guard/auth"
       traefik.http.services.access-guard.loadbalancer.server.port: "8585"
 
   mailhog:
     image: mailhog/mailhog
     ports:
       - 8025:8025
-
-
-volumes:
-  mypy_cache:

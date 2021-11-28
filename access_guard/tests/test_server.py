@@ -2,6 +2,7 @@ from functools import partial, singledispatchmethod
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from unittest import mock
+from urllib.parse import urljoin
 
 import pytest
 from itsdangerous.encoding import base64_encode
@@ -86,7 +87,9 @@ class TestAuth:
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"https://{settings.DOMAIN}/send"
+        assert (
+            response.headers["location"] == f"https://{settings.AUTH_HOST.netloc}/send"
+        )
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
     def test_returns_success_with_valid_verification_cookie(self) -> None:
@@ -156,7 +159,7 @@ class TestAuth:
             )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/send"
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/send")
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
         assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
@@ -203,7 +206,7 @@ class TestAuth:
         )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/send"
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/send")
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
         assert_verification_cookie_unset(response, settings.COOKIE_DOMAIN)
 
@@ -267,7 +270,7 @@ class TestAuth:
             allow_redirects=False,
         )
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/send"
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/send")
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
     def test_can_recreate_signature_expired_auth_cookie_when_forward_headers_exists(
@@ -284,7 +287,7 @@ class TestAuth:
             )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/send"
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/send")
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
         loads.assert_called_once_with(
             auth_cookie_set[settings.AUTH_COOKIE_NAME], max_age=60 * 60
@@ -363,8 +366,8 @@ class TestSend:
         send_mail.assert_called_once_with(
             email=email.lower(), link=mock.ANY, host_name="testservice.local"
         )
-        send_mail.call_args.kwargs["link"].startswith(
-            f"http://{settings.DOMAIN}/verify/"
+        assert str(send_mail.call_args.kwargs["link"]).startswith(
+            urljoin(str(settings.AUTH_HOST), "/verify/")
         )
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
         assert_csrf_cookie_unset(response, settings.COOKIE_DOMAIN)
@@ -591,7 +594,7 @@ class TestVerify:
             )
 
         assert response.status_code == HTTPStatus.SEE_OTHER
-        assert response.headers["location"] == f"http://{settings.DOMAIN}/auth"
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/auth")
 
     @pytest.mark.parametrize(
         "path_param",
