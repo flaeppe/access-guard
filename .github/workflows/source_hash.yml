@@ -18,4 +18,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: compute_hash
-        run: echo "::set-output name=hash::$(git ls-files | git hash-object --stdin)"
+        run: echo "::set-output name=hash::$(git ls-files | git hash-object --stdin-paths | git hash-object --stdin)"
