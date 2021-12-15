@@ -1,6 +1,6 @@
 ---
 
-name: Publish Docker image
+name: Release Docker images
 
 on:
   release:
