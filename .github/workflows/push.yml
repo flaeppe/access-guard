@@ -1,21 +1,24 @@
 ---
 
-name: Publish Docker image
+name: Publish images
 
 on:
-  release:
-    types: [published]
+  pull_request:
+    branches:
+      - master
+    types: [closed]
 
 env:
-  RELEASE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:${{ github.event.release.tag_name }}
-  LATEST_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:latest
+  PR_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:pr-${{ github.event.number }}
+  EDGE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:edge
 
 jobs:
   source-hash:
+    if: github.event.pull_request.merged == true
     uses: flaeppe/access-guard/.github/workflows/source_hash.yml@master
 
-  build-and-push:
-    name: Build and push Docker image to GitHub Container Registry
+  push:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -33,18 +36,25 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pull runtime image
+      - name: Pull PR image
         run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
-      - name: Build and push images
+          docker pull ${{ env.PR_TAG }}
+      - name: Build and push edge image
         uses: docker/build-push-action@v2
         with:
           target: release
           context: .
           build-args: |
             SOURCE_HASH=${{ needs.source-hash.outputs.source_hash }}
-            BUILD_VERSION=${{ github.event.release.tag_name }}
+            BUILD_VERSION=${{ github.sha }}
           push: true
           tags: |
-            ${{ env.RELEASE_TAG }}
-            ${{ env.LATEST_TAG }}
+            ${{ env.EDGE_TAG }}
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v2
+        with:
+          target: runtime
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}

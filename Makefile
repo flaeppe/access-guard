@@ -61,6 +61,11 @@ mypy:
 	@$(DOCKER_RUN) mypy --config-file pyproject.toml $(mypy)
 
 
+.PHONY: bash
+bash:
+	$(DOCKER_RUN) bash
+
+
 .PHONY: serve-docs
 serve-docs:
 	mkdocs serve

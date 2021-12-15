@@ -2,7 +2,6 @@
 ######################################
 # Builder step #######################
 ######################################
-ARG BUILD_TARGET=release
 FROM python:3.9.7-buster AS builder
 
 # Extra Python environment variables
@@ -21,15 +20,11 @@ RUN python -m venv /app/venv
 WORKDIR /app
 
 # Install Python dependencies
-COPY reqs reqs
-ARG BUILD_TARGET
+COPY reqs/requirements.txt ./reqs/
 RUN --mount=type=cache,target=/root/.cache/pip \
     set -x && \
     pip install pip==$PIP_PIP_VERSION pip-tools==$PIP_PIP_TOOLS_VERSION && \
     pip install --require-hashes --pre -r reqs/requirements.txt && \
-    if [ "${BUILD_TARGET}" = "dev" ] ; then \
-        pip install --require-hashes --pre -r reqs/dev-requirements.txt ; \
-    fi && \
     pip check
 
 ######################################
@@ -58,14 +53,32 @@ COPY --chown=app access_guard access_guard
 
 # TODO: Setup healthcheck
 
-ARG BUILD_TARGET
-ENV ACCESS_GUARD_BUILD_TARGET ${BUILD_TARGET}
 ENV PYTHONPATH="/app/access_guard:${PYTHONPATH}"
-
-ARG BUILD_VERSION
-ENV ACCESS_GUARD_BUILD_VERSION $BUILD_VERSION
 
 # Set port
 EXPOSE 8585
 
 ENTRYPOINT ["python", "-m", "access_guard"]
+
+######################################
+# Release step #######################
+######################################
+FROM runtime AS release
+
+ARG SOURCE_HASH
+ENV ACCESS_GUARD_SOURCE_HASH $SOURCE_HASH
+ARG BUILD_VERSION
+ENV ACCESS_GUARD_BUILD_VERSION $BUILD_VERSION
+
+######################################
+# Dev step ###########################
+######################################
+FROM runtime as dev
+
+USER root
+COPY reqs/dev-requirements.txt ./reqs/
+RUN --mount=type=cache,target=/root/.cache/pip \
+    set -x && \
+    pip install --require-hashes --pre -r reqs/dev-requirements.txt ; \
+    pip check
+USER app
