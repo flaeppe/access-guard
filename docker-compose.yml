@@ -31,8 +31,6 @@ services:
     image: access-guard
     build:
       context: .
-      args:
-        BUILD_TARGET: dev
     command: [
       ".*@test\\.com$$",
       "--secret", "supersecret",
