@@ -12,11 +12,9 @@ env:
 
 jobs:
   source-hash:
-    if: github.event.pull_request.merged == true
     uses: flaeppe/access-guard/.github/workflows/source_hash.yml@master
 
   push:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       packages: write
