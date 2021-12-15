@@ -1,0 +1,21 @@
+---
+
+name: Get source hash
+
+on:
+  workflow_call:
+    outputs:
+      source_hash:
+        description: "The object ID of the source code"
+        value: ${{ jobs.get_source_hash.outputs.source_hash }}
+
+jobs:
+  get_source_hash:
+    name: get-source-hash
+    runs-on: ubuntu-latest
+    outputs:
+      source_hash: ${{ steps.compute_hash.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: compute_hash
+        run: echo "::set-output name=hash::$(git ls-files | git hash-object --stdin)"
