@@ -13,3 +13,4 @@ services:
       COVERAGE_RCFILE: /app/setup.cfg
     volumes:
       - ./coverage:/app/coverage
+      - ./.mypy_cache:/app/.mypy_cache
