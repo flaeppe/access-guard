@@ -57,8 +57,7 @@ jobs:
           context: .
           push: true
           build-args: BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
-          tags: |
-            ${{ env.CI_TAG }}
+          tags: ${{ env.CI_TAG }}
 
   static-typing:
     name: Static Typing
