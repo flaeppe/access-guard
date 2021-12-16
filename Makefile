@@ -47,7 +47,8 @@ build: export DOCKER_SCAN_SUGGEST=false
 build: export DOCKER_BUILDKIT=1
 build: export COMPOSE_DOCKER_CLI_BUILD=1
 build:
-	docker-compose build $(DOCKER_DEV_IMAGE)
+	@docker build -f ./Dockerfile-base -t $(DOCKER_DEV_IMAGE):base .
+	@docker-compose build $(DOCKER_DEV_IMAGE)
 
 
 .PHONY: test

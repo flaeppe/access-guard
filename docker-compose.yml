@@ -31,6 +31,9 @@ services:
     image: access-guard
     build:
       context: .
+      target: dev
+      args:
+        - BASE_IMAGE=access-guard:base
     command: [
       ".*@test\\.com$$",
       "--secret", "supersecret",
