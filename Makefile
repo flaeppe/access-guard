@@ -34,8 +34,8 @@ docs-requirements: pre-requirements
 .PHONY: sync-local-requirements
 sync-local-requirements:
 	pip install \
-		pip==$$(cat Dockerfile | grep 'ENV PIP_PIP_VERSION' | cut -f3 -d' ') \
-		pip-tools==$$(cat Dockerfile | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
+		pip==$$(cat Dockerfile-base | grep 'ENV PIP_PIP_VERSION' | cut -f3 -d' ') \
+		pip-tools==$$(cat Dockerfile-base | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
 	pip-sync \
 		reqs/requirements.txt \
 		reqs/dev-requirements.txt \
