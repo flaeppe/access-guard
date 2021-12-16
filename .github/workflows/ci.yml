@@ -62,18 +62,9 @@ jobs:
   static-typing:
     name: Static Typing
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.9"
-      - name: Pip cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('reqs/*requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
       - name: MyPy cache
         uses: actions/cache@v2
         with:
@@ -81,10 +72,13 @@ jobs:
           key: ${{ runner.os }}-mypy
           restore-keys: |
             ${{ runner.os }}-mypy
+      - name: Fix permission issue on .mypy_cache
+        run: |
+          mkdir -p .mypy_cache
+          chmod -R 777 .mypy_cache
       - name: Run MyPy
         run: |
-          make sync-local-requirements
-          mypy --config-file pyproject.toml
+          IMAGE_TAG=${{ env.CI_TAG }} docker-compose -f docker-compose.ci.yml run sut mypy --config-file pyproject.toml
 
   test:
     name: Test
