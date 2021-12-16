@@ -12,7 +12,11 @@ env:
   DEV_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:dev-cache
 
 jobs:
-  push:
+  source-hash:
+    name: Get source hash
+    uses: flaeppe/access-guard/.github/workflows/source_hash.yml@master
+
+  push-base-cache:
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -38,6 +42,25 @@ jobs:
           context: .
           push: true
           tags: ${{ env.RUNTIME_CACHE_TAG }}
+
+  push-dev-cache:
+    runs-on: ubuntu-latest
+    needs: source-hash
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          version: v0.6.3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build dev image
         uses: docker/build-push-action@v2
         with:
@@ -46,4 +69,5 @@ jobs:
           context: .
           target: dev
           push: true
+          build-args: BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
           tags: ${{ env.DEV_CACHE_TAG }}
