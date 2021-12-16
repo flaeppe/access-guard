@@ -1,6 +1,6 @@
 ---
 
-name: Publish Docker images
+name: Release edge image
 
 on:
   push:
@@ -15,6 +15,7 @@ jobs:
     uses: flaeppe/access-guard/.github/workflows/source_hash.yml@master
 
   build-and-push:
+    name: Build and push edge image to GitHub container Registry
     runs-on: ubuntu-latest
     permissions:
       packages: write
