@@ -1,6 +1,6 @@
 ---
 
-name: Publish Docker images
+name: Release edge image
 
 on:
   push:
@@ -14,7 +14,8 @@ jobs:
   source-hash:
     uses: flaeppe/access-guard/.github/workflows/source_hash.yml@master
 
-  push:
+  build-and-push:
+    name: Build and push edge image to GitHub container Registry
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -35,10 +36,10 @@ jobs:
       - name: Build and push edge image
         uses: docker/build-push-action@v2
         with:
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
           target: release
           context: .
           build-args: |
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
             SOURCE_HASH=${{ needs.source-hash.outputs.source_hash }}
             BUILD_VERSION=${{ github.sha }}
           push: true

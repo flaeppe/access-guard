@@ -34,8 +34,8 @@ docs-requirements: pre-requirements
 .PHONY: sync-local-requirements
 sync-local-requirements:
 	pip install \
-		pip==$$(cat Dockerfile | grep 'ENV PIP_PIP_VERSION' | cut -f3 -d' ') \
-		pip-tools==$$(cat Dockerfile | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
+		pip==$$(cat Dockerfile-base | grep 'ENV PIP_PIP_VERSION' | cut -f3 -d' ') \
+		pip-tools==$$(cat Dockerfile-base | grep 'ENV PIP_PIP_TOOLS_VERSION' | cut -f3 -d' ')
 	pip-sync \
 		reqs/requirements.txt \
 		reqs/dev-requirements.txt \
@@ -47,7 +47,8 @@ build: export DOCKER_SCAN_SUGGEST=false
 build: export DOCKER_BUILDKIT=1
 build: export COMPOSE_DOCKER_CLI_BUILD=1
 build:
-	docker-compose build $(DOCKER_DEV_IMAGE)
+	@docker build -f ./Dockerfile-base -t $(DOCKER_DEV_IMAGE):base .
+	@docker-compose build $(DOCKER_DEV_IMAGE)
 
 
 .PHONY: test

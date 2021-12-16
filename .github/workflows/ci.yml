@@ -7,7 +7,8 @@ on:
 
 env:
   CI_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:pr-${{ github.event.number }}
-  DOCKER_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:cache
+  RUNTIME_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:runtime-cache
+  DEV_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:dev-cache
 
 jobs:
   source-hash:
@@ -39,27 +40,25 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build CI image
+      - name: Build and push runtime image
         uses: docker/build-push-action@v2
         with:
-          cache-from: type=registry,ref=${{ env.DOCKER_CACHE_TAG }}
-          target: dev
-          context: .
-          load: true
-          tags: |
-            ${{ env.CI_TAG }}
-      - name: Build and push runtime image cache
-        uses: docker/build-push-action@v2
-        with:
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }},mode=max
-          target: runtime
+          file: ./Dockerfile-base
+          cache-from: type=registry,ref=${{ env.RUNTIME_CACHE_TAG }}
           context: .
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
-      - name: Push CI image
-        run: |
-          docker push ${{ env.CI_TAG }}
+      - name: Build and push CI image
+        uses: docker/build-push-action@v2
+        with:
+          cache-from: type=registry,ref=${{ env.DEV_CACHE_TAG }}
+          target: dev
+          context: .
+          push: true
+          build-args: BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }}
+          tags: |
+            ${{ env.CI_TAG }}
 
   static-typing:
     name: Static Typing

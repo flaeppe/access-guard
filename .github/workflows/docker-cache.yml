@@ -8,11 +8,15 @@ on:
       - master
 
 env:
-  DOCKER_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:cache
+  RUNTIME_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:runtime-cache
+  DEV_CACHE_TAG: ghcr.io/${{ github.repository_owner }}/access-guard:dev-cache
 
 jobs:
   push:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx
@@ -25,12 +29,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build image
+      - name: Build runtime image
         uses: docker/build-push-action@v2
         with:
-          cache-from: type=registry,ref=${{ env.DOCKER_CACHE_TAG }}
-          cache-to: type=registry,ref=${{ env.DOCKER_CACHE_TAG }},mode=max
-          target: dev
+          file: ./Dockerfile-base
+          cache-from: type=registry,ref=${{ env.RUNTIME_CACHE_TAG }}
+          cache-to: type=registry,ref=${{ env.RUNTIME_CACHE_TAG }},mode=max
           context: .
           push: true
-          tags: ${{ env.DOCKER_CACHE_TAG }}
+          tags: ${{ env.RUNTIME_CACHE_TAG }}
+      - name: Build dev image
+        uses: docker/build-push-action@v2
+        with:
+          cache-from: type=registry,ref=${{ env.DEV_CACHE_TAG }}
+          cache-to: type=registry,ref=${{ env.DEV_CACHE_TAG }},mode=max
+          context: .
+          target: dev
+          push: true
+          tags: ${{ env.DEV_CACHE_TAG }}
