@@ -48,9 +48,10 @@ jobs:
           load: true
           tags: |
             ${{ env.CI_TAG }}
-      - name: Build and push runtime image
+      - name: Build and push runtime image cache
         uses: docker/build-push-action@v2
         with:
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/access-guard:${{ needs.source-hash.outputs.source_hash }},mode=max
           target: runtime
           context: .
           push: true
