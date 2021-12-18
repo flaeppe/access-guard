@@ -11,6 +11,7 @@ from unittest import mock
 
 import pytest
 from aiosmtplib.errors import SMTPException
+from starlette.datastructures import URL
 
 from .. import cli
 
@@ -29,7 +30,7 @@ def valid_command_args() -> tuple[dict[str, str], dict[str, Any]]:
         {
             "email_patterns": ".*",
             "--secret": "supersecret",
-            "--auth-host": "valid.local",
+            "--auth-host": "http://valid.local/",
             "--trusted-hosts": "valid.local",
             "--cookie-domain": "valid.local",
             "--email-host": "email-host",
@@ -40,7 +41,7 @@ def valid_command_args() -> tuple[dict[str, str], dict[str, Any]]:
             "debug": False,
             "email_patterns": [re.compile(r".*")],
             "secret": "supersecret",
-            "auth_host": "valid.local",
+            "auth_host": "http://valid.local/",
             "trusted_hosts": ["valid.local"],
             "cookie_domain": "valid.local",
             "cookie_secure": False,
@@ -124,7 +125,7 @@ def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
     required = {
         "email_patterns": ".*",
         "--secret": "supersecret",
-        "--auth-host": "valid.local",
+        "--auth-host": "http://valid.local",
         "--trusted-hosts": "valid.local",
         "--cookie-domain": "valid.local",
         "--email-host": "email-host",
@@ -177,7 +178,7 @@ def test_defaults() -> None:
                 "--secret",
                 "a secret",
                 "--auth-host",
-                "testing-defaults.local",
+                "http://testing-defaults.local/",
                 "--trusted-hosts",
                 "testing-defaults.local",
                 "--cookie-domain",
@@ -196,7 +197,7 @@ def test_defaults() -> None:
             "debug": False,
             "email_patterns": [re.compile(r".*@defaults.com")],
             "secret": "a secret",
-            "auth_host": "testing-defaults.local",
+            "auth_host": "http://testing-defaults.local/",
             "trusted_hosts": ["testing-defaults.local"],
             "cookie_domain": "testing-defaults.local",
             "cookie_secure": False,
@@ -396,7 +397,9 @@ class TestHealthcheck:
         ),
     )
     def test_command_exits_on_smtp_connect_raising(
-        self, error: Exception, valid_command_args: list[str]
+        self,
+        error: Exception,
+        valid_command_args: tuple[dict[str, str], dict[str, Any]],
     ) -> None:
         argv, __ = valid_command_args
         # TODO: Black seems to have troubles parsing multiline with..
@@ -427,4 +430,74 @@ class TestHealthcheck:
             validate_certs=True,
             client_cert=None,
             client_key=None,
+        )
+
+
+class TestAuthHost:
+    @pytest.mark.parametrize(
+        ("value", "msg_regex"),
+        (
+            pytest.param(
+                "://example.com/",
+                r".*either 'http' or 'https', got: ''.*",
+                id="missing_protocol",
+            ),
+            pytest.param(
+                "example.com/path",
+                r".*either 'http' or 'https', got: ''.*",
+                id="missing_protocol_and_separators",
+            ),
+            pytest.param(
+                "file:///some/path",
+                r".*either 'http' or 'https', got: 'file'.*",
+                id="protocol_is_non_http",
+            ),
+            pytest.param(
+                "http:///path", r".*is missing a domain.*", id="missing_domain"
+            ),
+            pytest.param(
+                "example.com",
+                r".*either 'http' or 'https', got: ''.*",
+                id="missing_protocol_and_path",
+            ),
+        ),
+    )
+    def test_parsing_fails_when(
+        self,
+        value: str,
+        msg_regex: str,
+        valid_command_args: tuple[dict[str, str], dict[str, Any]],
+    ):
+        argv, __ = valid_command_args
+        argv["--auth-host"] = value
+        with exiting_from_parse() as stderr:
+            cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
+
+        assert re.search(msg_regex, stderr.getvalue())
+
+    def test_can_parse_with_path_and_query_params(
+        self, valid_command_args: tuple[dict[str, str], dict[str, Any]]
+    ):
+        argv, parsed_argv = valid_command_args
+        argv["--auth-host"] = "http://example.com/path/?query=param#fragment"
+        with mock_successful_startup() as load_environ:
+            cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
+
+        load_environ.assert_called_once_with(
+            {**parsed_argv, "auth_host": URL(argv["--auth-host"])}
+        )
+
+    def test_forces_trailing_slash(
+        self, valid_command_args: tuple[dict[str, str], dict[str, Any]]
+    ):
+        argv, parsed_argv = valid_command_args
+        argv["--auth-host"] = "http://example.com/path?query=param#fragment"
+        with mock_successful_startup() as load_environ:
+            cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
+
+        load_environ.assert_called_once_with(
+            {
+                **parsed_argv,
+                "auth_host": URL("http://example.com/path/?query=param#fragment"),
+            }
         )

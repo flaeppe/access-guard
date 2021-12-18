@@ -35,7 +35,7 @@ Required arguments:
   -sf PATH_TO_FILE, --secret-file PATH_TO_FILE
                         Secret key file
   -a AUTH_HOST, --auth-host AUTH_HOST
-                        The entrypoint domain name for access guard (without protocol or path)
+                        The entrypoint url for access guard, with protocol and path
   -t TRUSTED_HOST [TRUSTED_HOST ...], --trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]
                         Hosts/domain names that access guard should serve. Matched against a request's Host header. Wildcard domains such as '*.example.com' are supported for matching subdomains. To allow any hostname use: *
   -c COOKIE_DOMAIN, --cookie-domain COOKIE_DOMAIN
@@ -144,13 +144,13 @@ Optional cookie arguments:
 
 :   `-a/--auth-host AUTH_HOST`
 
-    The configured domain name for the access guard service, without protocol or path. The service
+    The configured url for the access guard service, with protocol and path. The service
     wants to know this to redirect unverified clients in to the verification flow.
 
     ???+ example
 
         ```console
-        --auth-host auth.localhost.com
+        --auth-host http://auth.localhost.com/
         ```
 
 #### Trusted hosts
@@ -196,7 +196,7 @@ Optional cookie arguments:
     With an auth host configuration of:
 
     ```console
-    --auth-host auth.localhost.com
+    --auth-host http://auth.localhost.com/
     ```
 
     We can set a cookie domain configuration like
@@ -254,7 +254,7 @@ Optional cookie arguments:
 docker run --rm ghcr.io/flaeppe/access-guard:latest \
   ".*@test.com" \
   --secret supersecret \
-  --auth-host access-guard.localhost.com \
+  --auth-host http://access-guard.localhost.com/ \
   --trusted-hosts access-guard access-guard.localhost.com \
   --cookie-domain localhost.com \
   --email-host mailhog \
@@ -551,7 +551,7 @@ docker run --rm ghcr.io/flaeppe/access-guard:latest \
 docker run --rm ghcr.io/flaeppe/access-guard:latest \
   ".*@test.com" \
   --secret supersecret \
-  --auth-host access-guard.localhost.com \
+  --auth-host http://access-guard.localhost.com/ \
   --trusted-hosts access-guard access-guard.localhost.com \
   --cookie-domain localhost.com \
   --email-host mailhog \

@@ -37,7 +37,7 @@ services:
     command: [
       ".*@test\\.com$$",
       "--secret", "supersecret",
-      "--auth-host", "access-guard.localhost.com",
+      "--auth-host", "http://access-guard.localhost.com/",
       "--trusted-hosts", "access-guard", "access-guard.localhost.com",
       "--cookie-domain", "localhost.com",
       "--email-host", "mailhog",
@@ -101,8 +101,8 @@ of the "magic link" that'll be sent in the email by `access-guard`. Allowing us 
 verify that it is indeed `access-guard` that has created the "magic link" and that it
 hasn't been tampered with.
 
-The [--auth-host](reference.md#access-guards-host) value is the entrypoint host name for
-`access-guard`. This is the host we intend clients to see in a browser's address bar
+The [--auth-host](reference.md#access-guards-host) value is the entrypoint URL for
+`access-guard`. This is the URL we intend clients to see in a browser's address bar
 while verifying.
 
 The [--trusted-hosts](reference.md#trusted-hosts) values are the host values which

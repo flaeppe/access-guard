@@ -40,7 +40,7 @@ services:
     command: [
       ".*@test\\.com$$",
       "--secret", "supersecret",
-      "--auth-host", "access-guard.localhost.com",
+      "--auth-host", "http://access-guard.localhost.com/",
       "--trusted-hosts", "access-guard", "access-guard.localhost.com",
       "--cookie-domain", "localhost.com",
       "--email-host", "mailhog",

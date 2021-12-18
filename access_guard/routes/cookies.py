@@ -7,7 +7,7 @@ from pydantic.error_wrappers import ValidationError
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .. import csrf, settings
+from .. import settings
 from ..log import logger
 from ..schema import ForwardHeaders
 
@@ -59,7 +59,4 @@ set_auth_cookie = functools.partial(
 )
 set_verified_cookie = functools.partial(
     set_cookie, key=settings.VERIFIED_COOKIE_NAME, ttl=settings.VERIFY_SIGNATURE_MAX_AGE
-)
-set_csrf_cookie = functools.partial(
-    set_cookie, key=csrf.CSRF_COOKIE_NAME, ttl=csrf.CSRF_COOKIE_MAX_AGE
 )
