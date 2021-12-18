@@ -325,11 +325,11 @@ class TestSend:
 
     @pytest.mark.parametrize(
         "email",
-        (
+        [
             pytest.param("sOmeOne@ExAmPlE.CoM", id="mixed case"),
             pytest.param("someone@example.com", id="all lowercase"),
             pytest.param("SOMEONE@EXAMPLE.COM", id="all uppercase"),
-        ),
+        ],
     )
     def test_sends_verification_email_when_matching_pattern_as(
         self,
@@ -372,8 +372,8 @@ class TestSend:
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     @pytest.mark.parametrize(
-        "email,msg,error_code",
-        (
+        ("email", "msg", "error_code"),
+        [
             pytest.param(
                 "!#@invalid@email.com",
                 "value is not a valid email address",
@@ -389,7 +389,7 @@ class TestSend:
                 "value_error.email",
                 id="email as invalid type",
             ),
-        ),
+        ],
     )
     def test_rerenders_send_email_form_on_posting(
         self,
@@ -505,7 +505,7 @@ class TestVerify:
 
     @pytest.mark.parametrize(
         "path_param",
-        (
+        [
             pytest.param(base64_encode("notjson").decode(), id="is not valid json"),
             pytest.param("notbase64encoded", id="is not base64 encoded"),
             pytest.param(
@@ -516,7 +516,7 @@ class TestVerify:
                 settings.SIGNING.timed.dumps({"email": "invalidemail"}),
                 id="payload email is not a valid email",
             ),
-        ),
+        ],
     )
     def test_returns_not_found_when_signature(
         self, path_param: str, auth_cookie_set: RequestsCookieJar

@@ -24,7 +24,7 @@ successful_healthcheck = mock.patch(
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def valid_command_args() -> tuple[dict[str, str], dict[str, Any]]:
     return (
         {
@@ -95,7 +95,7 @@ def mock_successful_startup() -> Generator[mock.MagicMock, None, None]:
 
 
 @pytest.mark.parametrize(
-    "argv", (["-V"], ["--version"]), ids=["short name", "long name"]
+    "argv", [("-V",), ("--version",)], ids=["short name", "long name"]
 )
 def test_version_from(argv: list[str]) -> None:
     version = "0.0.0-test"
@@ -110,8 +110,8 @@ def test_version_from(argv: list[str]) -> None:
 
 
 @pytest.mark.parametrize(
-    "required_arg,error_msg_match",
-    (
+    ("required_arg", "error_msg_match"),
+    [
         pytest.param("email_patterns", "EMAIL_PATTERN", id="email patterns"),
         pytest.param("--auth-host", "-a/--auth-host", id="auth host"),
         pytest.param("--trusted-hosts", "-t/--trusted-hosts", id="trusted hosts"),
@@ -119,7 +119,7 @@ def test_version_from(argv: list[str]) -> None:
         pytest.param("--email-host", "--email-host", id="email host"),
         pytest.param("--email-port", "--email-port", id="email port"),
         pytest.param("--from-email", "--from-email", id="from email"),
-    ),
+    ],
 )
 def test_arg_is_required(required_arg: str, error_msg_match: str) -> None:
     required = {
@@ -217,8 +217,8 @@ def test_defaults() -> None:
 
 
 @pytest.mark.parametrize(
-    "additional_args,msg_regex",
-    (
+    ("additional_args", "msg_regex"),
+    [
         pytest.param(
             ["--secret-file", "some/file"],
             r".*-sf/--secret-file.*not allowed with argument.*-s/--secret",
@@ -234,7 +234,7 @@ def test_defaults() -> None:
             r".*--email-password-file.*not allowed with argument.*--email-password",
             id="email password and email password file",
         ),
-    ),
+    ],
 )
 def test_mutually_exclusive_args(
     additional_args: list[str],
@@ -275,8 +275,8 @@ def test_email_client_cert_and_key_parsed_as_path(
 
 
 @pytest.mark.parametrize(
-    "read_data,expected",
-    (
+    ("read_data", "expected"),
+    [
         pytest.param("secretfromfile", "secretfromfile", id="no trailing space"),
         pytest.param(
             "secretfromfile\n", "secretfromfile", id="content ending with newline"
@@ -293,7 +293,7 @@ def test_email_client_cert_and_key_parsed_as_path(
             "secretfromfile\nshouldbeignored", "secretfromfile", id="multiple lines"
         ),
         pytest.param(" ", " ", id="only spaces"),
-    ),
+    ],
 )
 def test_can_load_args_from_file_with(
     read_data: str,
@@ -325,11 +325,11 @@ def test_can_load_args_from_file_with(
 
 @pytest.mark.parametrize(
     "file_contents",
-    (
+    [
         pytest.param("", id="be empty"),
         pytest.param("\n", id="be sole newline character"),
         pytest.param("\nsomething", id="have an empty first line"),
-    ),
+    ],
 )
 def test_secret_file_content_can_not(
     file_contents: str,
@@ -358,11 +358,11 @@ def test_secret_file_content_can_not(
 
 @pytest.mark.parametrize(
     "file_contents",
-    (
+    [
         pytest.param("", id="be empty"),
         pytest.param("\n", id="be sole newline character"),
         pytest.param("\nsomething", id="have an empty first line"),
-    ),
+    ],
 )
 def test_email_password_file_content_can_not(
     file_contents: str,
@@ -391,10 +391,10 @@ def test_email_password_file_content_can_not(
 class TestHealthcheck:
     @pytest.mark.parametrize(
         "error",
-        (
+        [
             pytest.param(ValueError, id="value error"),
             pytest.param(SMTPException, id="smtp exception"),
-        ),
+        ],
     )
     def test_command_exits_on_smtp_connect_raising(
         self,
@@ -436,7 +436,7 @@ class TestHealthcheck:
 class TestAuthHost:
     @pytest.mark.parametrize(
         ("value", "msg_regex"),
-        (
+        [
             pytest.param(
                 "://example.com/",
                 r".*either 'http' or 'https', got: ''.*",
@@ -460,7 +460,7 @@ class TestAuthHost:
                 r".*either 'http' or 'https', got: ''.*",
                 id="missing_protocol_and_path",
             ),
-        ),
+        ],
     )
     def test_parsing_fails_when(
         self,
