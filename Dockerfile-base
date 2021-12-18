@@ -2,7 +2,7 @@
 ######################################
 # Builder step #######################
 ######################################
-FROM python:3.9.7-buster AS builder
+FROM python:3.10.1-buster AS builder
 
 # Extra Python environment variables
 ENV PYTHONUNBUFFERED 1
@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ######################################
 # Runtime step #######################
 ######################################
-FROM python:3.9.7-slim-buster AS runtime
+FROM python:3.10.1-slim-buster AS runtime
 
 # Extra Python environment variables
 ENV XDG_CACHE_HOME /tmp/pip/.cache
