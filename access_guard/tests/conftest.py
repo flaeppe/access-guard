@@ -11,17 +11,17 @@ from ..environ import environ  # noqa
 
 environ.load(  # noqa
     {
-        "email_patterns": (".*@test.com",),
+        "email_patterns": (".*@example.com",),
         "secret": "supersecret",
-        "auth_host": URL("http://auth.testserver.local/"),
-        "trusted_hosts": ("auth.testserver.local",),
-        "cookie_domain": "testserver.local",
+        "auth_host": URL("http://auth.example.com/"),
+        "trusted_hosts": ("auth.example.com",),
+        "cookie_domain": "example.com",
         "cookie_secure": False,
         "auth_cookie_name": "auth-test",
         "verified_cookie_name": "verified-test",
         "email_host": "email-host",
         "email_port": "666",
-        "from_email": "access-guard@local.com",
+        "from_email": "access-guard@example.com",
         "email_subject": "Test verification",
     }
 )
@@ -84,5 +84,5 @@ def send_url() -> str:
 @pytest.fixture(scope="function")
 def valid_auth_signature() -> AuthSignature:
     return AuthSignature.create(
-        email="someone@test.com", forward_headers=ForwardHeadersFactory.create()
+        email="someone@example.com", forward_headers=ForwardHeadersFactory.create()
     )

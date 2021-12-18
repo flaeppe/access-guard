@@ -72,7 +72,7 @@ class TestForwardHeaders:
         forward_headers = {
             "x-forwarded-method": "GET",
             "x-forwarded-proto": "http",
-            "x-forwarded-host": "testservice.local",
+            "x-forwarded-host": "example.com",
             "x-forwarded-uri": "/",
             "x-forwarded-for": "172.29.0.1",
             **changes,
@@ -157,13 +157,13 @@ class TestAuthSignature:
         signature = "doesnotmatter"
         with mock_time_signer_loads as loads:
             loads.return_value = {
-                "email": "someone@test.com",
+                "email": "someone@example.com",
                 "forward_headers": forward_headers.serialize(),
             }
             result = AuthSignature.loads(signature)
 
         assert result == AuthSignature(
-            email="someone@test.com",
+            email="someone@example.com",
             signature=signature,
             forward_headers=forward_headers,
         )
@@ -199,11 +199,11 @@ class TestAuthSignature:
 class TestVerification:
     def test_signing_loads_is_called_with_verify_signature_max_age(self):
         with mock_time_signer_loads as loads:
-            loads.return_value = {"email": "someone@test.com"}
+            loads.return_value = {"email": "someone@example.com"}
             result = Verification.loads("doesnotmatter")
 
         assert result == Verification(
-            email="someone@test.com", signature="doesnotmatter"
+            email="someone@example.com", signature="doesnotmatter"
         )
         loads.assert_called_once_with(
             "doesnotmatter", max_age=settings.VERIFY_SIGNATURE_MAX_AGE
