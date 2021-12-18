@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic.error_wrappers import ValidationError
 from starlette.background import BackgroundTask
@@ -16,6 +16,9 @@ from ..log import logger
 from ..schema import AuthSignature, ForwardHeaders
 from ..templating import templates
 from .cookies import IncompatibleAuthCookie, TamperedAuthCookie, validate_auth_cookie
+
+if TYPE_CHECKING:
+    from pydantic.error_wrappers import ErrorDict
 
 
 async def send(request: Request) -> Response:
@@ -82,7 +85,7 @@ async def _handle_send_email(
 class SendEmailResponse:
     request: Request
     host_name: str
-    errors: list[dict[str, Any]] | None = None
+    errors: list[ErrorDict] | None = None
 
     template: ClassVar[str] = "send_email.html"
 

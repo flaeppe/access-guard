@@ -4,5 +4,9 @@ itsdangerous
 starlette
 uvicorn
 aiosmtplib
-pydantic[email]
+# TODO: Unpin once https://github.com/samuelcolvin/pydantic/pull/3403 is released
+# (also remove email-validator, as it's in extras_require)
+# pydantic[email]
+email-validator>=1.0.3
+https://github.com/samuelcolvin/pydantic/archive/c834f3419d78d03ce176e6223b0b4e96ac4d3891.zip
 structlog
