@@ -82,7 +82,7 @@ class TestAuth:
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
-            value=settings.SIGNING.timed.dumps({"email": "verified@test.com"}),
+            value=settings.SIGNING.timed.dumps({"email": "verified@example.com"}),
             domain=settings.COOKIE_DOMAIN,
             secure=False,
             rest={"HttpOnly": True},
@@ -106,7 +106,7 @@ class TestAuth:
         assert response.text == ""
 
     def test_ignores_tampered_verification_cookie(self) -> None:
-        session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
+        session_value = settings.SIGNING.timed.dumps({"email": "verified@example.com"})
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
@@ -125,7 +125,7 @@ class TestAuth:
     def test_starts_email_verification_when_verified_expired_and_forward_headers_exists(
         self,
     ) -> None:
-        session_value = settings.SIGNING.timed.dumps({"email": "verified@email.com"})
+        session_value = settings.SIGNING.timed.dumps({"email": "verified@example.com"})
         cookie_jar = RequestsCookieJar()
         cookie_jar.set(
             name=settings.VERIFIED_COOKIE_NAME,
@@ -321,14 +321,14 @@ class TestSend:
         assert response.template.name == "send_email.html"
         assert set(response.context.keys()) == {"request", "host_name"}
         assert "host_name" in response.context
-        assert response.context["host_name"] == "testservice.local"
+        assert response.context["host_name"] == "example.com"
 
     @pytest.mark.parametrize(
         "email",
         (
-            pytest.param("sOmeOne@TeSt.CoM", id="mixed case"),
-            pytest.param("someone@test.com", id="all lowercase"),
-            pytest.param("SOMEONE@TEST.COM", id="all uppercase"),
+            pytest.param("sOmeOne@ExAmPlE.CoM", id="mixed case"),
+            pytest.param("someone@example.com", id="all lowercase"),
+            pytest.param("SOMEONE@EXAMPLE.COM", id="all uppercase"),
         ),
     )
     def test_sends_verification_email_when_matching_pattern_as(
@@ -347,7 +347,7 @@ class TestSend:
         assert response.status_code == HTTPStatus.OK
         assert response.template.name == "email_sent.html"
         send_mail.assert_called_once_with(
-            email=email.lower(), link=mock.ANY, host_name="testservice.local"
+            email=email.lower(), link=mock.ANY, host_name="example.com"
         )
         assert str(send_mail.call_args.kwargs["link"]).startswith(
             urljoin(str(settings.AUTH_HOST), "/verify/")
@@ -413,7 +413,7 @@ class TestSend:
         assert response.context["errors"] == [
             {"loc": ("email",), "msg": msg, "type": error_code}
         ]
-        assert response.context["host_name"] == "testservice.local"
+        assert response.context["host_name"] == "example.com"
         send_mail.assert_not_called()
         # Should not do anything with auth cookie
         assert settings.AUTH_COOKIE_NAME not in get_cookies(response)
@@ -463,7 +463,7 @@ class TestVerify:
     def test_can_verify(self) -> None:
         headers = ForwardHeadersFactory.create()
         auth_signature = AuthSignature.create(
-            email="someone@test.com", forward_headers=headers
+            email="someone@example.com", forward_headers=headers
         )
 
         response = self.api_client.get(self.url(auth_signature), allow_redirects=False)
@@ -476,7 +476,7 @@ class TestVerify:
         assert settings.VERIFIED_COOKIE_NAME in cookies
         assert settings.SIGNING.timed.loads(
             cookies[settings.VERIFIED_COOKIE_NAME].value
-        ) == {"email": "someone@test.com"}
+        ) == {"email": "someone@example.com"}
 
     def test_returns_not_found_when_signature_validation_returns_none(
         self, valid_auth_signature: AuthSignature
