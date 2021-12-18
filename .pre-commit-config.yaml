@@ -13,7 +13,7 @@ repos:
       - id: debug-statements
       - id: detect-private-key
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.29.0
+    rev: v2.29.1
     hooks:
       - id: pyupgrade
         args:
@@ -28,11 +28,11 @@ repos:
           - --remove-all-unused-imports
           - --ignore-init-module-imports
   - repo: https://github.com/pycqa/isort
-    rev: 5.9.3
+    rev: 5.10.1
     hooks:
       - id: isort
   - repo: https://github.com/psf/black
-    rev: 21.9b0
+    rev: 21.12b0
     hooks:
       - id: black
   - repo: https://gitlab.com/pycqa/flake8
@@ -44,8 +44,10 @@ repos:
           - flake8-comprehensions
           - flake8-tidy-imports
           - flake8-print
+          - flake8-pytest-style
+          - flake8-datetimez
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.5.1
+    rev: 0.9.1
     hooks:
       - id: check-github-workflows
         require_serial: true
@@ -63,7 +65,7 @@ repos:
         name: hadolint
         language: docker_image
         entry: >-
-          hadolint/hadolint:v2.7.0
+          hadolint/hadolint:v2.8.0
           hadolint
             --ignore DL3042
         types: [dockerfile]

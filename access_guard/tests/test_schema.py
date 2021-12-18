@@ -22,8 +22,8 @@ mock_time_signer_loads = mock.patch.object(
 
 class TestForwardHeaders:
     @pytest.mark.parametrize(
-        "changes,error",
-        (
+        ("changes", "error"),
+        [
             pytest.param(
                 {"x-forwarded-method": "invalid"},
                 [
@@ -64,7 +64,7 @@ class TestForwardHeaders:
                 ],
                 id="invalid http protocol",
             ),
-        ),
+        ],
     )
     def test_raises_invalid_forward_header_on(
         self, changes: dict[str, str], error: list[dict]
@@ -93,8 +93,8 @@ class TestForwardHeaders:
         }
 
     @pytest.mark.parametrize(
-        "value,expected",
-        (
+        ("value", "expected"),
+        [
             pytest.param(
                 "www.some-place.com:1337", "www.some-place.com", id="strips port"
             ),
@@ -102,7 +102,7 @@ class TestForwardHeaders:
             pytest.param(
                 "some-place", "some-place", id="does nothing when no port is specified"
             ),
-        ),
+        ],
     )
     def test_host_name(self, value: str, expected: str) -> None:
         assert ForwardHeadersFactory(host=value).host_name == expected
@@ -115,10 +115,10 @@ class DecodableClass(Decodable):
 class TestDecodable:
     @pytest.mark.parametrize(
         "error",
-        (
+        [
             pytest.param(BadData("baddata"), id="bad data"),
             pytest.param(BadSignature("badsignature"), id="bad signature"),
-        ),
+        ],
     )
     def test_decode_returns_none_when_signer_loads_raises(
         self, error: Exception
@@ -131,21 +131,22 @@ class TestDecodable:
         loads.assert_called_once_with("doesnotmatter", max_age=666)
 
     def test_decode_propagates_signature_expired_error(self):
-        with mock_time_signer_loads as loads, pytest.raises(SignatureExpired):
+        with mock_time_signer_loads as loads:
             loads.side_effect = SignatureExpired("expired")
-            DecodableClass.decode("doesnotmatter")
+            with pytest.raises(SignatureExpired):
+                DecodableClass.decode("doesnotmatter")
 
         loads.assert_called_once_with("doesnotmatter", max_age=666)
 
     @pytest.mark.parametrize(
         "value",
-        (
+        [
             pytest.param("", id="empty"),
             pytest.param(
                 settings.SIGNING.timed.dumps(["not a mapping"]),
                 id="payload is not a mapping",
             ),
-        ),
+        ],
     )
     def test_decode_returns_none_on_signature(self, value: str) -> None:
         assert DecodableClass.decode(value) is None
@@ -173,23 +174,24 @@ class TestAuthSignature:
 
     @pytest.mark.parametrize(
         "payload",
-        (
+        [
             pytest.param({}, id="payload missing expected keys"),
             pytest.param({"email": "notanemail"}, id="payload has an invalid email"),
             pytest.param(
                 {"email": "not@allowed.com"},
                 id="email is not matching configured patterns",
             ),
-        ),
+        ],
     )
     def test_loads_returns_none_when(self, payload: Any) -> None:
         signature = settings.SIGNING.timed.dumps(payload)
         assert AuthSignature.loads(signature) is None
 
     def test_reraises_signature_expiration_as_auth_signature_expired(self):
-        with mock_time_signer_loads as loads, pytest.raises(AuthSignatureExpired):
+        with mock_time_signer_loads as loads:
             loads.side_effect = SignatureExpired("expired")
-            AuthSignature.loads("expired signature")
+            with pytest.raises(AuthSignatureExpired):
+                AuthSignature.loads("expired signature")
 
         loads.assert_called_once_with(
             "expired signature", max_age=settings.AUTH_SIGNATURE_MAX_AGE
@@ -211,14 +213,14 @@ class TestVerification:
 
     @pytest.mark.parametrize(
         "payload",
-        (
+        [
             pytest.param({}, id="payload missing expected keys"),
             pytest.param({"email": "notanemail"}, id="payload has an invalid email"),
             pytest.param(
                 {"email": "not@allowed.com"},
                 id="email is not matching configured patterns",
             ),
-        ),
+        ],
     )
     def test_loads_returns_none_when(self, payload: Any) -> None:
         signature = settings.SIGNING.timed.dumps(payload)

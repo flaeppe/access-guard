@@ -31,7 +31,7 @@ from ..schema import AuthSignature  # noqa: E402
 from .factories import ForwardHeadersFactory  # noqa: E402
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 async def api_client() -> AsyncGenerator[TestClient, None]:
     from .. import server
 
@@ -41,12 +41,12 @@ async def api_client() -> AsyncGenerator[TestClient, None]:
         yield client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def cookie_jar() -> RequestsCookieJar:
     return RequestsCookieJar()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
@@ -58,7 +58,7 @@ def auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     return cookie_jar
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def expired_auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
@@ -81,7 +81,7 @@ def send_url() -> str:
     return "/send"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def valid_auth_signature() -> AuthSignature:
     return AuthSignature.create(
         email="someone@example.com", forward_headers=ForwardHeadersFactory.create()

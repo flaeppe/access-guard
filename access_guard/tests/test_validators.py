@@ -8,12 +8,12 @@ from ..validators import DisallowedEmail, check_email_is_allowed
 class TestCheckEmailIsAllowed:
     @pytest.mark.parametrize(
         "email",
-        (
+        [
             pytest.param(
                 "mismatch@email.com", id="when email doesn't match configured patterns"
             ),
             pytest.param("", id="when empty string"),
-        ),
+        ],
     )
     def test_raises_disallowed_email(self, email: str) -> None:
         with pytest.raises(DisallowedEmail):

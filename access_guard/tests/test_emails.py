@@ -8,7 +8,7 @@ from starlette.datastructures import URL
 from ..emails import send_mail
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def mock_smtp_connection() -> Generator[mock.AsyncMock, None, None]:
     context_mock = mock.AsyncMock(spec_set=aiosmtplib.SMTP)
     with mock.patch("aiosmtplib.SMTP.__aenter__", autospec=True) as connection:
@@ -16,7 +16,7 @@ def mock_smtp_connection() -> Generator[mock.AsyncMock, None, None]:
         yield context_mock
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_can_send_auth_mail(mock_smtp_connection: mock.AsyncMock) -> None:
     await send_mail(
         email="someone@test.com", link=URL("http://something"), host_name="something"
