@@ -11,7 +11,7 @@ from requests.cookies import RequestsCookieJar
 from requests.models import Response
 from starlette.testclient import TestClient
 
-from .. import csrf, settings
+from .. import settings
 from ..schema import AuthSignature, ForwardHeaders
 from .factories import ForwardHeadersFactory
 
@@ -40,7 +40,6 @@ assert_auth_cookie_unset = partial(assert_cookie_unset, settings.AUTH_COOKIE_NAM
 assert_verification_cookie_unset = partial(
     assert_cookie_unset, settings.VERIFIED_COOKIE_NAME
 )
-assert_csrf_cookie_unset = partial(assert_cookie_unset, csrf.CSRF_COOKIE_NAME)
 
 
 def assert_valid_auth_cookie(
@@ -57,19 +56,6 @@ def assert_valid_auth_cookie(
     assert not cookie["secure"]
     assert cookie["httponly"]
     assert cookie["path"] == "/"
-
-
-def assert_valid_csrf_cookie(response: Response, domain: str) -> None:
-    cookies = get_cookies(response)
-    assert csrf.CSRF_COOKIE_NAME in cookies
-    cookie = cookies[csrf.CSRF_COOKIE_NAME]
-    assert "csrf_token" in response.context
-    body_token = response.context["csrf_token"]
-    settings.SIGNING.url_safe.loads(
-        settings.SIGNING.separator.join(
-            [settings.SIGNING.url_safe.dump_payload(body_token).decode(), cookie.value]
-        )
-    )
 
 
 class TestAuth:
@@ -333,10 +319,9 @@ class TestSend:
         response = self.api_client.get(self.url, cookies=auth_cookie_set)
         assert response.status_code == HTTPStatus.OK
         assert response.template.name == "send_email.html"
-        assert set(response.context.keys()) == {"request", "host_name", "csrf_token"}
+        assert set(response.context.keys()) == {"request", "host_name"}
         assert "host_name" in response.context
         assert response.context["host_name"] == "testservice.local"
-        assert_valid_csrf_cookie(response, settings.COOKIE_DOMAIN)
 
     @pytest.mark.parametrize(
         "email",
@@ -350,14 +335,12 @@ class TestSend:
         self,
         email: str,
         auth_cookie_set: RequestsCookieJar,
-        csrf_token: tuple[str, RequestsCookieJar],
     ) -> None:
-        csrf_token, cookies = csrf_token
         with mock_send_mail as send_mail:
             response = self.api_client.post(
                 self.url,
-                data={"email": email, "csrf_token": csrf_token},
-                cookies=cookies,
+                data={"email": email},
+                cookies=auth_cookie_set,
                 allow_redirects=False,
             )
 
@@ -370,19 +353,16 @@ class TestSend:
             urljoin(str(settings.AUTH_HOST), "/verify/")
         )
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
-        assert_csrf_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     def test_verification_email_is_not_sent_when_email_not_matching_any_pattern(
         self,
         auth_cookie_set: RequestsCookieJar,
-        csrf_token: tuple[str, RequestsCookieJar],
     ) -> None:
-        csrf_token, cookies = csrf_token
         with mock_send_mail as send_mail:
             response = self.api_client.post(
                 self.url,
-                data={"email": "someone@else.com", "csrf_token": csrf_token},
-                cookies=cookies,
+                data={"email": "someone@else.com"},
+                cookies=auth_cookie_set,
                 allow_redirects=False,
             )
 
@@ -390,7 +370,6 @@ class TestSend:
         assert response.template.name == "email_sent.html"
         send_mail.assert_not_called()
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
-        assert_csrf_cookie_unset(response, settings.COOKIE_DOMAIN)
 
     @pytest.mark.parametrize(
         "email,msg,error_code",
@@ -418,14 +397,10 @@ class TestSend:
         msg: str,
         error_code: str,
         auth_cookie_set: RequestsCookieJar,
-        csrf_token: tuple[str, RequestsCookieJar],
     ) -> None:
-        csrf_token, cookies = csrf_token
         with mock_send_mail as send_mail:
             response = self.api_client.post(
-                self.url,
-                data={"email": email, "csrf_token": csrf_token},
-                cookies=cookies,
+                self.url, data={"email": email}, cookies=auth_cookie_set
             )
 
         assert response.status_code == HTTPStatus.BAD_REQUEST
@@ -433,7 +408,6 @@ class TestSend:
         assert set(response.context.keys()) == {
             "request",
             "host_name",
-            "csrf_token",
             "errors",
         }
         assert response.context["errors"] == [
@@ -464,73 +438,6 @@ class TestSend:
             self.url, cookies=expired_auth_cookie_set, allow_redirects=False
         )
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-
-    def test_returns_bad_request_when_csrf_token_is_missing(
-        self,
-        auth_cookie_set: RequestsCookieJar,
-        csrf_token: tuple[str, RequestsCookieJar],
-    ) -> None:
-        __, cookies = csrf_token
-        response = self.api_client.post(
-            self.url, data={"email": "someone@email.com"}, cookies=cookies
-        )
-        assert response.status_code == HTTPStatus.BAD_REQUEST
-        assert response.template.name == "send_email.html"
-        assert set(response.context.keys()) == {
-            "request",
-            "host_name",
-            "csrf_token",
-            "errors",
-        }
-        assert response.context["errors"] == [
-            {
-                "loc": ("csrf_token",),
-                "msg": "field required",
-                "type": "value_error.missing",
-            }
-        ]
-
-    def test_returns_forbidden_when_csrf_cookie_is_missing(
-        self, auth_cookie_set: RequestsCookieJar
-    ) -> None:
-        csrf_raw, __ = csrf.get_token()
-        response = self.api_client.post(
-            self.url,
-            data={"email": "someone@email.com", "csrf_token": csrf_raw},
-            cookies=auth_cookie_set,
-        )
-        assert response.status_code == HTTPStatus.FORBIDDEN
-
-    def test_returns_forbidden_when_csrf_cookie_is_tampered_with(
-        self, auth_cookie_set: RequestsCookieJar
-    ) -> None:
-        csrf_raw, csrf_signed = csrf.get_token()
-        auth_cookie_set.set(
-            name=csrf.CSRF_COOKIE_NAME,
-            value=csrf_signed[1:],
-            domain=settings.COOKIE_DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
-        )
-        response = self.api_client.post(
-            self.url,
-            data={"email": "someone@email.com", "csrf_token": csrf_raw},
-            cookies=auth_cookie_set,
-        )
-        assert response.status_code == HTTPStatus.FORBIDDEN
-
-    def test_returns_forbidden_when_csrf_token_does_not_match_csrf_cookie(
-        self,
-        auth_cookie_set: RequestsCookieJar,
-        csrf_token: tuple[str, RequestsCookieJar],
-    ) -> None:
-        csrf_raw, cookies = csrf_token
-        response = self.api_client.post(
-            self.url,
-            data={"email": "someone@email.com", "csrf_token": csrf_raw[1:]},
-            cookies=cookies,
-        )
-        assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 class TestVerify:

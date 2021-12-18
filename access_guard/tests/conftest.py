@@ -71,21 +71,6 @@ def expired_auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     return cookie_jar
 
 
-@pytest.fixture(scope="function")
-def csrf_token(cookie_jar: RequestsCookieJar) -> tuple[str, RequestsCookieJar]:
-    from access_guard import csrf
-
-    raw, signed = csrf.get_token()
-    cookie_jar.set(
-        name=csrf.CSRF_COOKIE_NAME,
-        value=signed,
-        domain=settings.COOKIE_DOMAIN,
-        secure=False,
-        rest={"HttpOnly": True},
-    )
-    return raw, cookie_jar
-
-
 @pytest.fixture(scope="session")
 def auth_url() -> str:
     return "/auth"
