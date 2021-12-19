@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from enum import Enum
 from pathlib import Path
 from typing import Any, NamedTuple, Sequence
 
@@ -85,4 +86,14 @@ AUTH_SIGNATURE_MAX_AGE: int = config(
 # Default: 24 hours
 VERIFY_SIGNATURE_MAX_AGE: int = config(
     "verify_signature_max_age", cast=int, default=60 * 60 * 24
+)
+
+
+class LogFormatter(str, Enum):
+    JSON = "json"
+    CONSOLE = "console"
+
+
+LOG_FORMATTER: LogFormatter = config(
+    "log_formatter", cast=LogFormatter, default=LogFormatter.JSON
 )

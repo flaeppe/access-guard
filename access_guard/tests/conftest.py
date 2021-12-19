@@ -1,3 +1,4 @@
+import logging.config
 from typing import AsyncGenerator, Generator
 from unittest import mock
 
@@ -25,12 +26,20 @@ environ.load(  # noqa
         "email_port": "666",
         "from_email": "access-guard@example.com",
         "email_subject": "Test verification",
+        "log_formatter": "console",
     }
 )
 
 from .. import settings  # noqa: E402
+from ..log import LOGGING_CONFIG  # noqa: E402
 from ..schema import AuthSignature  # noqa: E402
 from .factories import ForwardHeadersFactory  # noqa: E402
+
+
+# Configure logging for a bit nicer log outputs during tests
+@pytest.fixture(scope="session", autouse=True)
+def _configure_logging() -> None:
+    logging.config.dictConfig(LOGGING_CONFIG)
 
 
 @pytest.fixture()

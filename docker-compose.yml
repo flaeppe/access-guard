@@ -42,7 +42,8 @@ services:
       "--cookie-domain", "localhost.com",
       "--email-host", "mailhog",
       "--email-port", "1025",
-      "--from-email", "access-guard@local.com"
+      "--from-email", "access-guard@local.com",
+      "--log-formatter", "console",
       ]
     stdin_open: true
     tty: true

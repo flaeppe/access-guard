@@ -12,9 +12,23 @@ emails to.
 
 ```console
 $ docker run --rm ghcr.io/flaeppe/access-guard:latest --help
-usage: access-guard [-h] -s SECRET -a AUTH_HOST -t TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d] [--host HOST] [--port PORT] --email-host EMAIL_HOST --email-port EMAIL_PORT --from-email FROM_EMAIL [--email-username EMAIL_USERNAME]
-                    [--email-password EMAIL_PASSWORD] [--email-use-tls | --email-start-tls] [--email-validate-certs] [--email-client-cert EMAIL_CLIENT_CERT] [--email-client-key EMAIL_CLIENT_KEY] [--email-subject EMAIL_SUBJECT] [--cookie-secure]
-                    [--auth-cookie-name AUTH_COOKIE_NAME] [--verified-cookie-name VERIFIED_COOKIE_NAME] [--auth-cookie-max-age AUTH_COOKIE_MAX_AGE] [--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE] [--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE]
+usage: access-guard [-h] (-s SECRET | -sf PATH_TO_FILE) -a AUTH_HOST -t
+                    TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d]
+                    [--host HOST] [--port PORT]
+                    [--log-formatter {json,console}] --email-host EMAIL_HOST
+                    --email-port EMAIL_PORT --from-email FROM_EMAIL
+                    [--email-username EMAIL_USERNAME]
+                    [--email-password EMAIL_PASSWORD | --email-password-file PATH_TO_FILE]
+                    [--email-use-tls | --email-start-tls]
+                    [--email-no-validate-certs]
+                    [--email-client-cert EMAIL_CLIENT_CERT]
+                    [--email-client-key EMAIL_CLIENT_KEY]
+                    [--email-subject EMAIL_SUBJECT] [--cookie-secure]
+                    [--auth-cookie-name AUTH_COOKIE_NAME]
+                    [--verified-cookie-name VERIFIED_COOKIE_NAME]
+                    [--auth-cookie-max-age AUTH_COOKIE_MAX_AGE]
+                    [--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE]
+                    [--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE]
                     EMAIL_PATTERN [EMAIL_PATTERN ...]
 
 ...
@@ -22,12 +36,14 @@ usage: access-guard [-h] -s SECRET -a AUTH_HOST -t TRUSTED_HOST [TRUSTED_HOST ..
 positional arguments:
   EMAIL_PATTERN         Email addresses to match, each compiled to a regex
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -V, --version         show program's version number and exit
   -d, --debug
   --host HOST           Server host. [default: 0.0.0.0]
   --port PORT           Server port. [default: 8585]
+  --log-formatter {json,console}
+                        Log output format [default: json]
 
 Required arguments:
   -s SECRET, --secret SECRET
@@ -35,11 +51,16 @@ Required arguments:
   -sf PATH_TO_FILE, --secret-file PATH_TO_FILE
                         Secret key file
   -a AUTH_HOST, --auth-host AUTH_HOST
-                        The entrypoint url for access guard, with protocol and path
+                        The entrypoint url for access guard, with protocol and
+                        path
   -t TRUSTED_HOST [TRUSTED_HOST ...], --trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]
-                        Hosts/domain names that access guard should serve. Matched against a request's Host header. Wildcard domains such as '*.example.com' are supported for matching subdomains. To allow any hostname use: *
+                        Hosts/domain names that access guard should serve.
+                        Matched against a request's Host header. Wildcard
+                        domains such as '*.example.com' are supported for
+                        matching subdomains. To allow any hostname use: *
   -c COOKIE_DOMAIN, --cookie-domain COOKIE_DOMAIN
-                        The domain to use for cookies. Ensure this value covers domain set for AUTH_HOST
+                        The domain to use for cookies. Ensure this value
+                        covers domain set for AUTH_HOST
 
 Required email arguments:
   SMTP/Email specific configuration
@@ -47,7 +68,8 @@ Required email arguments:
   --email-host EMAIL_HOST
                         The host to use for sending emails
   --email-port EMAIL_PORT
-                        Port to use for the SMTP server defined in --email-host
+                        Port to use for the SMTP server defined in --email-
+                        host
   --from-email FROM_EMAIL
                         What will become the sender's address in sent emails
 
@@ -55,36 +77,56 @@ Optional email arguments:
   SMTP/Email specific configuration
 
   --email-username EMAIL_USERNAME
-                        Username to login with on configured SMTP server [default: unset]
+                        Username to login with on configured SMTP server
+                        [default: unset]
   --email-password EMAIL_PASSWORD
-                        Password to login with on configured SMTP server [default: unset]
+                        Password to login with on configured SMTP server
+                        [default: unset]
   --email-password-file PATH_TO_FILE
-                        File containing password to login with on configured SMTP server [default: unset]
-  --email-use-tls       Make the _initial_ connection to the SMTP server over TLS/SSL [default: false]
-  --email-start-tls     Make the initial connection to the SMTP server over plaintext, and then upgrade the connection to TLS/SSL [default: false]
+                        File containing password to login with on configured
+                        SMTP server [default: unset]
+  --email-use-tls       Make the _initial_ connection to the SMTP server over
+                        TLS/SSL [default: false]
+  --email-start-tls     Make the initial connection to the SMTP server over
+                        plaintext, and then upgrade the connection to TLS/SSL
+                        [default: false]
   --email-no-validate-certs
-                        Disable validating server certificates for SMTP [default: false]
+                        Disable validating server certificates for SMTP
+                        [default: false]
   --email-client-cert EMAIL_CLIENT_CERT
-                        Path to client side certificate, for TLS verification [default: unset]
+                        Path to client side certificate, for TLS verification
+                        [default: unset]
   --email-client-key EMAIL_CLIENT_KEY
-                        Path to client side key, for TLS verification [default: unset]
+                        Path to client side key, for TLS verification
+                        [default: unset]
   --email-subject EMAIL_SUBJECT
-                        Subject of the email sent for verification [default: Access guard verification]
+                        Subject of the email sent for verification [default:
+                        Access guard verification]
 
 Optional cookie arguments:
   Configuration for cookies
 
-  --cookie-secure       Whether to only use secure cookies. When passed, cookies will be marked as 'secure' [default: false]
+  --cookie-secure       Whether to only use secure cookies. When passed,
+                        cookies will be marked as 'secure' [default: false]
   --auth-cookie-name AUTH_COOKIE_NAME
-                        Name for cookie used during auth flow [default: access-guard-forwarded]
+                        Name for cookie used during auth flow [default:
+                        access-guard-forwarded]
   --verified-cookie-name VERIFIED_COOKIE_NAME
-                        Name for cookie set when auth completed successfully [default: access-guard-session]
+                        Name for cookie set when auth completed successfully
+                        [default: access-guard-session]
   --auth-cookie-max-age AUTH_COOKIE_MAX_AGE
-                        Seconds before the cookie set _during_ auth flow should expire [default: 3600 (1 hour)]
+                        Seconds before the cookie set _during_ auth flow
+                        should expire [default: 3600 (1 hour)]
   --auth-signature-max-age AUTH_SIGNATURE_MAX_AGE
-                        Decides how many seconds a verification email should be valid. When the amount of seconds has passed, the client has to request a new email. [default: 600 (10 minutes)]
+                        Decides how many seconds a verification email should
+                        be valid. When the amount of seconds has passed, the
+                        client has to request a new email. [default: 600 (10
+                        minutes)]
   --verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE
-                        Decides how many seconds a verified session cookie should be valid. When the amount of seconds has passed, the client has to verify again. [default: 86400 (24 hours)]
+                        Decides how many seconds a verified session cookie
+                        should be valid. When the amount of seconds has
+                        passed, the client has to verify again. [default:
+                        86400 (24 hours)]
 ```
 
 ## Arguments reference
@@ -285,6 +327,16 @@ docker run --rm ghcr.io/flaeppe/access-guard:latest \
     ???+ info "Default value"
 
         8585
+
+#### Log formatter
+
+:   `--log-formatter`
+
+    Log output format, available choices are `json` or `console`
+
+    ???+ info "Default value"
+
+        json
 
 #### SMTP client username
 
