@@ -8,7 +8,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from . import settings
+from . import healthcheck, settings
 from .log import LOGGING_CONFIG
 from .routes.auth import auth
 from .routes.send import send
@@ -37,7 +37,12 @@ routes = [
 middleware = [
     Middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS),
 ]
-app = Starlette(routes=routes, middleware=middleware, debug=settings.DEBUG)
+app = Starlette(
+    routes=routes,
+    middleware=middleware,
+    debug=settings.DEBUG,
+    on_startup=[healthcheck.check_smtp],
+)
 
 
 def run() -> None:  # pragma: no cover
