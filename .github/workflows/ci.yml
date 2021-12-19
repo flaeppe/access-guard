@@ -101,4 +101,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           minimum_coverage: 100
           fail_below_threshold: true
+          link_missing_lines: true
           show_missing: true
+          show_line: true
+          show_branch: true

@@ -33,6 +33,7 @@ testpaths = [
 ]
 
 [tool.coverage.run]
+branch = true
 omit = [
   "*/venv/*",
   "*/__main__.py",
