@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import os
 import re
 import sys
 from pathlib import Path
 
-from aiosmtplib.errors import SMTPException
 from starlette.datastructures import URL
-
-from .log import logger
 
 
 def command(argv: list[str] | None = None) -> None:
@@ -26,9 +22,6 @@ def command(argv: list[str] | None = None) -> None:
         parsed["email_password"] = read_first_line(email_password_file)
 
     environ.load(parsed)
-
-    if not healthcheck():
-        exit(666)
     start_server()
 
 
@@ -325,29 +318,3 @@ def read_first_line(path: Path) -> str:
         sys.exit(2)
 
     return value
-
-
-class HealthcheckFailed(Exception):
-    ...
-
-
-async def _check_smtp() -> None:
-    from access_guard.emails import get_connection
-
-    try:
-        async with get_connection():
-            ...
-    except (ValueError, SMTPException) as exc:
-        raise HealthcheckFailed("Failed to establish an SMTP connection") from exc
-
-
-def healthcheck() -> bool:
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(_check_smtp())
-    except HealthcheckFailed:
-        logger.critical("healthcheck.failed", exc_info=True)
-        return False
-
-    logger.info("healthcheck.success")
-    return True

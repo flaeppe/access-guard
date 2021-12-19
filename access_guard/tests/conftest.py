@@ -1,5 +1,7 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
+from unittest import mock
 
+import aiosmtplib
 import pytest
 from requests.cookies import RequestsCookieJar
 from starlette.datastructures import URL
@@ -32,7 +34,21 @@ from .factories import ForwardHeadersFactory  # noqa: E402
 
 
 @pytest.fixture()
-async def api_client() -> AsyncGenerator[TestClient, None]:
+def mock_smtp_connection() -> Generator[mock.AsyncMock, None, None]:
+    connection_mock = mock.AsyncMock(
+        spec_set=aiosmtplib.SMTP, name="mocked_smtp_connection"
+    )
+    with mock.patch.object(
+        aiosmtplib.SMTP, "__aenter__", autospec=True, name="mocked_smtp_context"
+    ) as context:
+        context.return_value = connection_mock
+        yield connection_mock
+
+
+@pytest.fixture()
+async def api_client(
+    mock_smtp_connection: mock.AsyncMock,
+) -> AsyncGenerator[TestClient, None]:
     from .. import server
 
     with TestClient(

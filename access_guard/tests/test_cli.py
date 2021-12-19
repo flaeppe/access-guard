@@ -3,24 +3,22 @@ from __future__ import annotations
 import itertools
 import os
 import re
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from io import StringIO
 from pathlib import Path
 from typing import Any, Generator
 from unittest import mock
 
 import pytest
-from aiosmtplib.errors import SMTPException
 from starlette.datastructures import URL
 
 from .. import cli
 
 mock_load_environ = mock.patch("access_guard.environ.environ.load", autospec=True)
 mock_run_server = mock.patch("access_guard.server.run", autospec=True)
-mock_smtp_connection = mock.patch("aiosmtplib.SMTP", autospec=True)
 mock_stderr = mock.patch("argparse._sys.stderr", new_callable=StringIO)
 successful_healthcheck = mock.patch(
-    "access_guard.cli.healthcheck", autospec=True, return_value=True
+    "access_guard.healthcheck.check_smtp", autospec=True
 )
 
 
@@ -386,51 +384,6 @@ def test_email_password_file_content_can_not(
         re.search(r".*empty first line in email/password/file.*", stderr.getvalue())
         is not None
     )
-
-
-class TestHealthcheck:
-    @pytest.mark.parametrize(
-        "error",
-        [
-            pytest.param(ValueError, id="value error"),
-            pytest.param(SMTPException, id="smtp exception"),
-        ],
-    )
-    def test_command_exits_on_smtp_connect_raising(
-        self,
-        error: Exception,
-        valid_command_args: tuple[dict[str, str], dict[str, Any]],
-    ) -> None:
-        argv, __ = valid_command_args
-        # TODO: Black seems to have troubles parsing multiline with..
-        with ExitStack() as stack:
-            stack.enter_context(mock_load_environ)
-            run_server = stack.enter_context(mock_run_server)
-            smtp_connection = stack.enter_context(mock_smtp_connection)
-            cm = stack.enter_context(pytest.raises(SystemExit))
-
-            smtp_connection.side_effect = error("failed")
-            cli.command(dict_to_argv(argv, positionals={"email_patterns"}))
-
-        assert cm.value.code == 666
-        run_server.assert_not_called()
-
-    def test_returns_true_on_valid_smtp_connection(self):
-        with mock_smtp_connection as smtp_connection:
-            result = cli.healthcheck()
-
-        assert result is True
-        smtp_connection.assert_called_once_with(
-            hostname="email-host",
-            port=666,
-            username=None,
-            password=None,
-            use_tls=False,
-            start_tls=False,
-            validate_certs=True,
-            client_cert=None,
-            client_key=None,
-        )
 
 
 class TestAuthHost:

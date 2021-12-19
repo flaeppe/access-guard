@@ -1,19 +1,9 @@
-from typing import Generator
 from unittest import mock
 
-import aiosmtplib
 import pytest
 from starlette.datastructures import URL
 
 from ..emails import send_mail
-
-
-@pytest.fixture()
-def mock_smtp_connection() -> Generator[mock.AsyncMock, None, None]:
-    context_mock = mock.AsyncMock(spec_set=aiosmtplib.SMTP)
-    with mock.patch("aiosmtplib.SMTP.__aenter__", autospec=True) as connection:
-        connection.return_value = context_mock
-        yield context_mock
 
 
 @pytest.mark.asyncio()
