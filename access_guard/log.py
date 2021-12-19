@@ -1,11 +1,14 @@
 import structlog
 from structlog.types import Processor
 
+from .settings import LOG_FORMATTER
+
 processors: tuple[Processor, ...] = (
-    structlog.threadlocal.merge_threadlocal,
+    structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.processors.TimeStamper(fmt="iso"),
+    structlog.processors.format_exc_info,
 )
 structlog.configure(
     processors=[
@@ -30,15 +33,20 @@ LOGGING_CONFIG: dict = {
             "processor": structlog.processors.JSONRenderer(),
             "foreign_pre_chain": processors,
         },
+        "console": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.dev.ConsoleRenderer(),
+            "foreign_pre_chain": processors,
+        },
     },
     "handlers": {
         "default": {
-            "formatter": "json",
+            "formatter": LOG_FORMATTER,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
         },
         "access": {
-            "formatter": "json",
+            "formatter": LOG_FORMATTER,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },

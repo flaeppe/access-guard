@@ -143,6 +143,14 @@ def parse_argv(argv: list[str]) -> argparse.Namespace:
         default=8585,
         help="Server port. [default: 8585]",
     )
+    parser.add_argument(
+        "--log-formatter",
+        type=str,
+        choices=("json", "console"),
+        default=argparse.SUPPRESS,
+        dest="log_formatter",
+        help="Log output format [default: json]",
+    )
     # Required email arguments
     email_required.add_argument(
         "--email-host",
