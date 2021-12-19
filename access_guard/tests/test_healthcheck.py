@@ -5,8 +5,6 @@ import pytest
 
 from .. import healthcheck
 
-mock_smtp_connection = mock.patch("aiosmtplib.SMTP", autospec=True)
-
 
 class TestHealthcheck:
     @pytest.mark.asyncio()
@@ -29,7 +27,7 @@ class TestHealthcheck:
 
     @pytest.mark.asyncio()
     async def test_returns_true_on_valid_smtp_connection(self):
-        with mock_smtp_connection as smtp_connection:
+        with mock.patch("aiosmtplib.SMTP", autospec=True) as smtp_connection:
             await healthcheck.check_smtp()
 
         smtp_connection.assert_called_once_with(
