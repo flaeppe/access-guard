@@ -78,27 +78,25 @@ class TestAuth:
         )
         assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
-    def test_returns_success_with_valid_verification_cookie(self) -> None:
-        cookie_jar = RequestsCookieJar()
-        cookie_jar.set(
-            name=settings.VERIFIED_COOKIE_NAME,
-            value=settings.SIGNING.timed.dumps({"email": "verified@example.com"}),
-            domain=settings.COOKIE_DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
-        )
-        # Set a auth cookie and see that it's removed
-        cookie_jar.set(
-            name=settings.AUTH_COOKIE_NAME,
-            value="something",
-            domain=settings.COOKIE_DOMAIN,
-            secure=False,
-            rest={"HttpOnly": True},
-        )
-        response = self.api_client.get(self.url, cookies=cookie_jar)
+    def test_returns_success_with_valid_verification_cookie_and_auth_cookie(
+        self,
+        auth_cookie_set: RequestsCookieJar,
+        verified_cookie_set: RequestsCookieJar,
+    ) -> None:
+        response = self.api_client.get(self.url, cookies=verified_cookie_set)
         assert response.status_code == HTTPStatus.OK
         assert response.text == ""
         assert_auth_cookie_unset(response, settings.COOKIE_DOMAIN)
+
+    def test_returns_success_with_valid_verification_cookie_only(
+        self,
+        verified_cookie_set: RequestsCookieJar,
+    ) -> None:
+        response = self.api_client.get(self.url, cookies=verified_cookie_set)
+        assert response.status_code == HTTPStatus.OK
+        assert response.text == ""
+        cookies = get_cookies(response)
+        assert settings.AUTH_COOKIE_NAME not in cookies
 
     def test_returns_unauthorized_when_x_forwarded_headers_missing(self) -> None:
         response = self.api_client.get(self.url)
@@ -305,6 +303,27 @@ class TestAuth:
             auth_cookie_set[settings.AUTH_COOKIE_NAME],
             max_age=settings.AUTH_COOKIE_MAX_AGE,
         )
+
+    def test_starts_verification_when_valid_auth_cookie_exists(self) -> None:
+        forward_headers = ForwardHeadersFactory.create()
+        cookies = RequestsCookieJar()
+        cookies.set(
+            name=settings.AUTH_COOKIE_NAME,
+            value=forward_headers.encode(),
+            domain=settings.COOKIE_DOMAIN,
+            secure=False,
+            rest={"HttpOnly": True},
+        )
+        response = self.api_client.get(
+            self.url,
+            headers={"ignored": "values"},
+            cookies=cookies,
+            allow_redirects=False,
+        )
+
+        assert response.status_code == HTTPStatus.SEE_OTHER
+        assert response.headers["location"] == urljoin(str(settings.AUTH_HOST), "/send")
+        assert_valid_auth_cookie(response, forward_headers, settings.COOKIE_DOMAIN)
 
 
 class TestSend:

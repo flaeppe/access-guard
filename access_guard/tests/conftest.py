@@ -59,6 +59,18 @@ def auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
 
 
 @pytest.fixture()
+def verified_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
+    cookie_jar.set(
+        name=settings.VERIFIED_COOKIE_NAME,
+        value=settings.SIGNING.timed.dumps({"email": "verified@example.com"}),
+        domain=settings.COOKIE_DOMAIN,
+        secure=False,
+        rest={"HttpOnly": True},
+    )
+    return cookie_jar
+
+
+@pytest.fixture()
 def expired_auth_cookie_set(cookie_jar: RequestsCookieJar) -> RequestsCookieJar:
     cookie_jar.set(
         name=settings.AUTH_COOKIE_NAME,
