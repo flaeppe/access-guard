@@ -10,7 +10,7 @@ services:
     stdin_open: true
     tty: true
     environment:
-      COVERAGE_RCFILE: /app/setup.cfg
+      COVERAGE_RCFILE: /app/pyproject.toml
     volumes:
       - ./coverage:/app/coverage
       - ./.mypy_cache:/app/.mypy_cache
