@@ -36,7 +36,7 @@ from ..schema import AuthSignature  # noqa: E402
 from .factories import ForwardHeadersFactory  # noqa: E402
 
 
-# Configure logging for a bit nicer log ouputs during tests
+# Configure logging for a bit nicer log outputs during tests
 @pytest.fixture(scope="session", autouse=True)
 def _configure_logging() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
