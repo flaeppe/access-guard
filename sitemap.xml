@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://flaeppe.github.io/access-guard/</loc>
+         <lastmod>2021-12-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://flaeppe.github.io/access-guard/how_it_works/</loc>
+         <lastmod>2021-12-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://flaeppe.github.io/access-guard/reference/</loc>
+         <lastmod>2021-12-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://flaeppe.github.io/access-guard/traefik/</loc>
+         <lastmod>2021-12-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+</urlset>

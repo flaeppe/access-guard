@@ -1,0 +1,1263 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A forward authentication service that provides email verification.">
+      
+      
+      
+      
+        <link rel="canonical" href="https://flaeppe.github.io/access-guard/reference/">
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-7.3.6">
+    
+    
+      
+        <title>Reference - Access guard</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.a57b2b03.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.3f5d1f46.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#009485">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+      
+    
+    
+    
+    
+      
+
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="teal" data-md-color-accent="blue">
+  
+    
+    <script>function __prefix(e){return new URL("..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#prerequisites" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+  
+
+<header class="md-header md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Access guard" class="md-header__button md-logo" aria-label="Access guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Access guard
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/flaeppe/access-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    flaeppe/access-guard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href=".." class="md-tabs__link">
+      Introduction
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../how_it_works/" class="md-tabs__link">
+        Usage
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+
+
+  <li class="md-tabs__item">
+    <a href="./" class="md-tabs__link md-tabs__link--active">
+      Reference
+    </a>
+  </li>
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Access guard" class="md-nav__button md-logo" aria-label="Access guard" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Access guard
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/flaeppe/access-guard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    flaeppe/access-guard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Introduction
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Usage
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Usage" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Usage
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how_it_works/" class="md-nav__link">
+        How it works
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../traefik/" class="md-nav__link">
+        Use with traefik's forward auth
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Reference
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    Prerequisites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-arguments" class="md-nav__link">
+    Command line arguments
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arguments-reference" class="md-nav__link">
+    Arguments reference
+  </a>
+  
+    <nav class="md-nav" aria-label="Arguments reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-arguments" class="md-nav__link">
+    Required arguments
+  </a>
+  
+    <nav class="md-nav" aria-label="Required arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#email-patterns" class="md-nav__link">
+    Email patterns
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secret" class="md-nav__link">
+    Secret
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secret-file" class="md-nav__link">
+    Secret file
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-guards-host" class="md-nav__link">
+    Access guard's host
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trusted-hosts" class="md-nav__link">
+    Trusted hosts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cookie-domain" class="md-nav__link">
+    Cookie domain
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-host" class="md-nav__link">
+    SMTP host
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-port" class="md-nav__link">
+    SMTP port
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#senders-email-address" class="md-nav__link">
+    Sender's email address
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-using-minimal-arguments" class="md-nav__link">
+    Example using minimal arguments
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-arguments" class="md-nav__link">
+    Optional arguments
+  </a>
+  
+    <nav class="md-nav" aria-label="Optional arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bind-host" class="md-nav__link">
+    Bind host
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bind-port" class="md-nav__link">
+    Bind port
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log-formatter" class="md-nav__link">
+    Log formatter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-username" class="md-nav__link">
+    SMTP client username
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-password" class="md-nav__link">
+    SMTP client password
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-password-file" class="md-nav__link">
+    SMTP client password file
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-use-tls" class="md-nav__link">
+    SMTP client use TLS
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-start-tls" class="md-nav__link">
+    SMTP client start TLS
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disable-smtp-cert-validation" class="md-nav__link">
+    Disable SMTP cert validation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-tls-cert" class="md-nav__link">
+    SMTP client TLS cert
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp-client-tls-key" class="md-nav__link">
+    SMTP client TLS key
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#email-subject" class="md-nav__link">
+    Email subject
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cookie-secure" class="md-nav__link">
+    Cookie secure
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auth-cookie-name" class="md-nav__link">
+    Auth cookie name
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verified-cookie-name" class="md-nav__link">
+    Verified cookie name
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auth-cookie-max-age" class="md-nav__link">
+    Auth cookie max age
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification-email-max-age" class="md-nav__link">
+    Verification email max age
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verified-session-max-age" class="md-nav__link">
+    Verified session max age
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-using-all-arguments" class="md-nav__link">
+    Example using all arguments
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  <h1>Reference</h1>
+                
+                <div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The entrypoint path to the Access guard service is <code>/auth</code>. This is where a forwarder
+should send a request to check if access should be granted or not.</p>
+</div>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>An SMTP server that Access guard can configure its SMTP client to send verification
+emails to.</p>
+<h2 id="command-line-arguments">Command line arguments</h2>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>docker run --rm ghcr.io/flaeppe/access-guard:latest --help
+<span class="go">usage: access-guard [-h] (-s SECRET | -sf PATH_TO_FILE) -a AUTH_HOST -t</span>
+<span class="go">                    TRUSTED_HOST [TRUSTED_HOST ...] -c COOKIE_DOMAIN [-V] [-d]</span>
+<span class="go">                    [--host HOST] [--port PORT]</span>
+<span class="go">                    [--log-formatter {json,console}] --email-host EMAIL_HOST</span>
+<span class="go">                    --email-port EMAIL_PORT --from-email FROM_EMAIL</span>
+<span class="go">                    [--email-username EMAIL_USERNAME]</span>
+<span class="go">                    [--email-password EMAIL_PASSWORD | --email-password-file PATH_TO_FILE]</span>
+<span class="go">                    [--email-use-tls | --email-start-tls]</span>
+<span class="go">                    [--email-no-validate-certs]</span>
+<span class="go">                    [--email-client-cert EMAIL_CLIENT_CERT]</span>
+<span class="go">                    [--email-client-key EMAIL_CLIENT_KEY]</span>
+<span class="go">                    [--email-subject EMAIL_SUBJECT] [--cookie-secure]</span>
+<span class="go">                    [--auth-cookie-name AUTH_COOKIE_NAME]</span>
+<span class="go">                    [--verified-cookie-name VERIFIED_COOKIE_NAME]</span>
+<span class="go">                    [--auth-cookie-max-age AUTH_COOKIE_MAX_AGE]</span>
+<span class="go">                    [--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE]</span>
+<span class="go">                    [--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE]</span>
+<span class="go">                    EMAIL_PATTERN [EMAIL_PATTERN ...]</span>
+
+<span class="go">...</span>
+
+<span class="go">positional arguments:</span>
+<span class="go">  EMAIL_PATTERN         Email addresses to match, each compiled to a regex</span>
+
+<span class="go">options:</span>
+<span class="go">  -h, --help            show this help message and exit</span>
+<span class="go">  -V, --version         show program&#39;s version number and exit</span>
+<span class="go">  -d, --debug</span>
+<span class="go">  --host HOST           Server host. [default: 0.0.0.0]</span>
+<span class="go">  --port PORT           Server port. [default: 8585]</span>
+<span class="go">  --log-formatter {json,console}</span>
+<span class="go">                        Log output format [default: json]</span>
+
+<span class="go">Required arguments:</span>
+<span class="go">  -s SECRET, --secret SECRET</span>
+<span class="go">                        Secret key</span>
+<span class="go">  -sf PATH_TO_FILE, --secret-file PATH_TO_FILE</span>
+<span class="go">                        Secret key file</span>
+<span class="go">  -a AUTH_HOST, --auth-host AUTH_HOST</span>
+<span class="go">                        The entrypoint url for access guard, with protocol and</span>
+<span class="go">                        path</span>
+<span class="go">  -t TRUSTED_HOST [TRUSTED_HOST ...], --trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]</span>
+<span class="go">                        Hosts/domain names that access guard should serve.</span>
+<span class="go">                        Matched against a request&#39;s Host header. Wildcard</span>
+<span class="go">                        domains such as &#39;*.example.com&#39; are supported for</span>
+<span class="go">                        matching subdomains. To allow any hostname use: *</span>
+<span class="go">  -c COOKIE_DOMAIN, --cookie-domain COOKIE_DOMAIN</span>
+<span class="go">                        The domain to use for cookies. Ensure this value</span>
+<span class="go">                        covers domain set for AUTH_HOST</span>
+
+<span class="go">Required email arguments:</span>
+<span class="go">  SMTP/Email specific configuration</span>
+
+<span class="go">  --email-host EMAIL_HOST</span>
+<span class="go">                        The host to use for sending emails</span>
+<span class="go">  --email-port EMAIL_PORT</span>
+<span class="go">                        Port to use for the SMTP server defined in --email-</span>
+<span class="go">                        host</span>
+<span class="go">  --from-email FROM_EMAIL</span>
+<span class="go">                        What will become the sender&#39;s address in sent emails</span>
+
+<span class="go">Optional email arguments:</span>
+<span class="go">  SMTP/Email specific configuration</span>
+
+<span class="go">  --email-username EMAIL_USERNAME</span>
+<span class="go">                        Username to login with on configured SMTP server</span>
+<span class="go">                        [default: unset]</span>
+<span class="go">  --email-password EMAIL_PASSWORD</span>
+<span class="go">                        Password to login with on configured SMTP server</span>
+<span class="go">                        [default: unset]</span>
+<span class="go">  --email-password-file PATH_TO_FILE</span>
+<span class="go">                        File containing password to login with on configured</span>
+<span class="go">                        SMTP server [default: unset]</span>
+<span class="go">  --email-use-tls       Make the _initial_ connection to the SMTP server over</span>
+<span class="go">                        TLS/SSL [default: false]</span>
+<span class="go">  --email-start-tls     Make the initial connection to the SMTP server over</span>
+<span class="go">                        plaintext, and then upgrade the connection to TLS/SSL</span>
+<span class="go">                        [default: false]</span>
+<span class="go">  --email-no-validate-certs</span>
+<span class="go">                        Disable validating server certificates for SMTP</span>
+<span class="go">                        [default: false]</span>
+<span class="go">  --email-client-cert EMAIL_CLIENT_CERT</span>
+<span class="go">                        Path to client side certificate, for TLS verification</span>
+<span class="go">                        [default: unset]</span>
+<span class="go">  --email-client-key EMAIL_CLIENT_KEY</span>
+<span class="go">                        Path to client side key, for TLS verification</span>
+<span class="go">                        [default: unset]</span>
+<span class="go">  --email-subject EMAIL_SUBJECT</span>
+<span class="go">                        Subject of the email sent for verification [default:</span>
+<span class="go">                        Access guard verification]</span>
+
+<span class="go">Optional cookie arguments:</span>
+<span class="go">  Configuration for cookies</span>
+
+<span class="go">  --cookie-secure       Whether to only use secure cookies. When passed,</span>
+<span class="go">                        cookies will be marked as &#39;secure&#39; [default: false]</span>
+<span class="go">  --auth-cookie-name AUTH_COOKIE_NAME</span>
+<span class="go">                        Name for cookie used during auth flow [default:</span>
+<span class="go">                        access-guard-forwarded]</span>
+<span class="go">  --verified-cookie-name VERIFIED_COOKIE_NAME</span>
+<span class="go">                        Name for cookie set when auth completed successfully</span>
+<span class="go">                        [default: access-guard-session]</span>
+<span class="go">  --auth-cookie-max-age AUTH_COOKIE_MAX_AGE</span>
+<span class="go">                        Seconds before the cookie set _during_ auth flow</span>
+<span class="go">                        should expire [default: 3600 (1 hour)]</span>
+<span class="go">  --auth-signature-max-age AUTH_SIGNATURE_MAX_AGE</span>
+<span class="go">                        Decides how many seconds a verification email should</span>
+<span class="go">                        be valid. When the amount of seconds has passed, the</span>
+<span class="go">                        client has to request a new email. [default: 600 (10</span>
+<span class="go">                        minutes)]</span>
+<span class="go">  --verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE</span>
+<span class="go">                        Decides how many seconds a verified session cookie</span>
+<span class="go">                        should be valid. When the amount of seconds has</span>
+<span class="go">                        passed, the client has to verify again. [default:</span>
+<span class="go">                        86400 (24 hours)]</span>
+</code></pre></div>
+<h2 id="arguments-reference">Arguments reference</h2>
+<h3 id="required-arguments">Required arguments</h3>
+<h4 id="email-patterns">Email patterns</h4>
+<dl>
+<dd>
+<p><code>EMAIL_PATTERN [EMAIL_PATTERN ...]</code></p>
+<p>Positional argument</p>
+<p>Email address patterns to match for being allowed possibility to verify and access.
+All entered patterns are case insensitively matched with emails entered by a client.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">*@email.com someone@else.com</span>
+</code></pre></div>
+</details>
+</dd>
+</dl>
+<h4 id="secret">Secret</h4>
+<dl>
+<dd>
+<p><code>-s/--secret SECRET</code></p>
+<p>Should be set to a unique, unpredictable value. Is used for cryptographic signing.</p>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--secret</code> and <code>--secret-file</code> can <em>not</em> be passed at the same time</p>
+</details>
+</dd>
+</dl>
+<h4 id="secret-file">Secret file</h4>
+<dl>
+<dd>
+<p><code>-sf/--secret-file PATH_TO_FILE</code></p>
+<p>As an alternative to passing the secret via command line, the value can be loaded
+from a file present in the container.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--secret-file /run/secrets/access-guard-secret</span>
+</code></pre></div>
+</details>
+<p>Only the <em>first line</em> of the secret file will be read and any newline character at
+the end of it will be removed.</p>
+<details class="warning" open="open"><summary>Warning</summary><p>If the first line is <em>empty</em> after any newline character has been removed, an error will be raised.</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--secret-file</code> and <code>--secret</code> can <em>not</em> be passed at the same time.</p>
+</details>
+</dd>
+</dl>
+<h4 id="access-guards-host">Access guard's host</h4>
+<dl>
+<dd>
+<p><code>-a/--auth-host AUTH_HOST</code></p>
+<p>The configured url for the access guard service, with protocol and path. The service
+wants to know this to redirect unverified clients in to the verification flow.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--auth-host http://auth.localhost.com/</span>
+</code></pre></div>
+</details>
+</dd>
+</dl>
+<h4 id="trusted-hosts">Trusted hosts</h4>
+<dl>
+<dd>
+<p><code>-t/--trusted-hosts TRUSTED_HOST [TRUSTED_HOST ...]</code></p>
+<p>Hosts/domain names that access guard should serve. Matched against a request's <code>Host</code> header.
+Wildcard domains are supported for matching subdomains. Remember that for usage with docker
+and traefik, the <em>name</em> of the access guard service could be a trusted host. That'll allow
+the <code>forwardauth</code> middleware to configure an address resolved via a docker network.
+For example (via label/docker configuration):</p>
+<div class="highlight"><pre><span></span><code>traefik.http.middlewares.access-guard.forwardauth.address: &quot;http://access-guard:8585/auth&quot;
+</code></pre></div>
+<details class="example" open="open"><summary>Example</summary><div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Multiple hosts</label><label for="__tabbed_1_2">Wildcard subdomains</label><label for="__tabbed_1_3">Any hostname</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="go">--trusted-hosts access-guard auth.localhost.com</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="go">--trusted-hosts *.localhost.com</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="go">--trusted-hosts *</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</details>
+</dd>
+</dl>
+<h4 id="cookie-domain">Cookie domain</h4>
+<dl>
+<dd>
+<p><code>-c/--cookie-domain COOKIE_DOMAIN</code></p>
+<p>The domain to use for cookies. Ensure this value covers the domain set for
+<code>--auth-host</code>.</p>
+<p>With an auth host configuration of:</p>
+<div class="highlight"><pre><span></span><code><span class="go">--auth-host http://auth.localhost.com/</span>
+</code></pre></div>
+<p>We can set a cookie domain configuration like</p>
+<div class="highlight"><pre><span></span><code><span class="go">--cookie-domain localhost.com</span>
+</code></pre></div>
+<p>That'll allow a verification cookie to follow along to, for example, the hosts:</p>
+<div class="highlight"><pre><span></span><code>service_1.localhost.com
+service_2.localhost.com
+</code></pre></div>
+</dd>
+</dl>
+<h4 id="smtp-host">SMTP host</h4>
+<dl>
+<dd>
+<p><code>--email-host EMAIL_HOST</code></p>
+<p>The host to use for sending of emails</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-host 172.18.0.1</span>
+</code></pre></div>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-port">SMTP port</h4>
+<dl>
+<dd>
+<p><code>--email-port EMAIL_PORT</code></p>
+<p>Port to use for the SMTP server defined in <code>--email-host</code></p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-port 25</span>
+</code></pre></div>
+</details>
+</dd>
+</dl>
+<h4 id="senders-email-address">Sender's email address</h4>
+<dl>
+<dd>
+<p><code>--from-email FROM_EMAIL</code></p>
+<p>What will become the sender's address in sent emails.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--from-email verificator@email.com</span>
+</code></pre></div>
+</details>
+</dd>
+</dl>
+<h3 id="example-using-minimal-arguments">Example using minimal arguments</h3>
+<div class="highlight"><pre><span></span><code>docker run --rm ghcr.io/flaeppe/access-guard:latest <span class="se">\</span>
+  <span class="s2">&quot;.*@test.com&quot;</span> <span class="se">\</span>
+  --secret supersecret <span class="se">\</span>
+  --auth-host http://access-guard.localhost.com/ <span class="se">\</span>
+  --trusted-hosts access-guard access-guard.localhost.com <span class="se">\</span>
+  --cookie-domain localhost.com <span class="se">\</span>
+  --email-host mailhog <span class="se">\</span>
+  --email-port <span class="m">1025</span> <span class="se">\</span>
+  --from-email access-guard@local.com
+</code></pre></div>
+<h3 id="optional-arguments">Optional arguments</h3>
+<h4 id="bind-host">Bind host</h4>
+<dl>
+<dd>
+<p><code>--host HOST</code></p>
+<p>The socket that access guard's server should bind to. This will be <em>inside</em> of a
+running container.</p>
+<details class="info" open="open"><summary>Default value</summary><p>0.0.0.0</p>
+</details>
+</dd>
+</dl>
+<h4 id="bind-port">Bind port</h4>
+<dl>
+<dd>
+<p><code>--port PORT</code></p>
+<p>The port that access guard's server should bind to. This will be <em>inside</em> of a
+running container.</p>
+<details class="info" open="open"><summary>Default value</summary><p>8585</p>
+</details>
+</dd>
+</dl>
+<h4 id="log-formatter">Log formatter</h4>
+<dl>
+<dd>
+<p><code>--log-formatter</code></p>
+<p>Log output format, available choices are <code>json</code> or <code>console</code></p>
+<details class="info" open="open"><summary>Default value</summary><p>json</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-username">SMTP client username</h4>
+<dl>
+<dd>
+<p><code>--email-username EMAIL_USERNAME</code></p>
+<p>Username to login with on configured SMTP server</p>
+<details class="info" open="open"><summary>Default value</summary><p>Not set</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-password">SMTP client password</h4>
+<dl>
+<dd>
+<p><code>--email-password EMAIL_PASSWORD</code></p>
+<p>Password to login with on configured SMTP server</p>
+<details class="info" open="open"><summary>Default value</summary><p>Not set</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--email-password</code> and <code>--email-password-file</code> can <em>not</em> be passed at the same
+time</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-password-file">SMTP client password file</h4>
+<dl>
+<dd>
+<p><code>--email-password-file PATH_TO_FILE</code></p>
+<p>As an alternative to passing a password via command line, the value can be loaded
+from a file present in the container.</p>
+<p>Only the <em>first line</em> of the password file will be read and any newline character at
+the end of it will be removed.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-password-file /run/secrets/email-passwd</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>Not set</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>If the first line is <em>empty</em> after any newline character has been removed, an
+error will be raised.</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--email-password-file</code> and <code>--email-password</code> can <em>not</em> be passed at the
+same time</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-use-tls">SMTP client use TLS</h4>
+<dl>
+<dd>
+<p><code>--email-use-tls</code></p>
+<p>Make the <em>initial</em> connection to the SMTP server over TLS/SSL.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-use-tls</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>false</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--email-use-tls</code> and <code>--email-start-tls</code> can <em>not</em> be passed at the same
+time</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-start-tls">SMTP client start TLS</h4>
+<dl>
+<dd>
+<p><code>--email-start-tls</code></p>
+<p>Make the initial connection to the SMTP server over plaintext, and then upgrade the
+connection to TLS/SSL.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-start-tls</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>false</p>
+</details>
+<details class="warning" open="open"><summary>Warning</summary><p>Both <code>--email-start-tls</code> and <code>--email-use-tls</code> can <em>not</em> be passed at the same time</p>
+</details>
+</dd>
+</dl>
+<h4 id="disable-smtp-cert-validation">Disable SMTP cert validation</h4>
+<dl>
+<dd>
+<p><code>--email-no-validate-certs</code></p>
+<p>Disable validating server certificates for SMTP</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-no-validate-certs</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>false</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-tls-cert">SMTP client TLS cert</h4>
+<dl>
+<dd>
+<p><code>--email-client-cert EMAIL_CLIENT_CERT</code></p>
+<p>Path to client side certificate, for TLS verification</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-client-cert /path/to/cert</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>Not set</p>
+</details>
+</dd>
+</dl>
+<h4 id="smtp-client-tls-key">SMTP client TLS key</h4>
+<dl>
+<dd>
+<p><code>--email-client-key EMAIL_CLIENT_KEY</code></p>
+<p>Path to client side key, for TLS verification</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-client-key /path/to/key</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>Not set</p>
+</details>
+</dd>
+</dl>
+<h4 id="email-subject">Email subject</h4>
+<dl>
+<dd>
+<p><code>--email-subject EMAIL_SUBJECT</code></p>
+<p>Subject of the email sent for verification</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--email-subject &quot;Custom email subject line&quot;</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>"Access guard verification"</p>
+</details>
+</dd>
+</dl>
+<h4 id="cookie-secure">Cookie secure</h4>
+<dl>
+<dd>
+<p><code>--cookie-secure</code></p>
+<p>Whether to only use secure cookies. When passed, cookies will be marked as 'secure'</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--cookie-secure</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>false</p>
+</details>
+</dd>
+</dl>
+<h4 id="auth-cookie-name">Auth cookie name</h4>
+<dl>
+<dd>
+<p><code>--auth-cookie-name AUTH_COOKIE_NAME</code></p>
+<p>Name for cookie used during auth flow</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--auth-cookie-name cookie-name</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>access-guard-forwarded</p>
+</details>
+</dd>
+</dl>
+<h4 id="verified-cookie-name">Verified cookie name</h4>
+<dl>
+<dd>
+<p><code>--verified-cookie-name VERIFIED_COOKIE_NAME</code></p>
+<p>Name for cookie set when auth completed successfully</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--verified-cookie-name cookie-name</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>access-guard-session</p>
+</details>
+</dd>
+</dl>
+<h4 id="auth-cookie-max-age">Auth cookie max age</h4>
+<dl>
+<dd>
+<p><code>--auth-cookie-max-age AUTH_COOKIE_MAX_AGE</code></p>
+<p>Seconds before the cookie set <em>during</em> auth flow should expire</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--auth-cookie-max-age 600</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>3600 (1 hour)</p>
+</details>
+</dd>
+</dl>
+<h4 id="verification-email-max-age">Verification email max age</h4>
+<dl>
+<dd>
+<p><code>--auth-signature-max-age AUTH_SIGNATURE_MAX_AGE</code></p>
+<p>Decides how many seconds a verification email should be valid. When the amount of
+seconds has passed, the client has to request a new email.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--auth-signature-max-age 300</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>600 (10 minutes)</p>
+</details>
+</dd>
+</dl>
+<h4 id="verified-session-max-age">Verified session max age</h4>
+<dl>
+<dd>
+<p><code>--verify-signature-max-age VERIFY_SIGNATURE_MAX_AGE</code></p>
+<p>Decides how many seconds a verified session cookie should be valid. When the amount
+of seconds has passed, the client has to verify again.</p>
+<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code><span class="go">--verify-signature-max-age 43200</span>
+</code></pre></div>
+</details>
+<details class="info" open="open"><summary>Default value</summary><p>86400 (24 hours)</p>
+</details>
+</dd>
+</dl>
+<h3 id="example-using-all-arguments">Example using all arguments</h3>
+<div class="highlight"><pre><span></span><code>docker run --rm ghcr.io/flaeppe/access-guard:latest <span class="se">\</span>
+  <span class="s2">&quot;.*@test.com&quot;</span> <span class="se">\</span>
+  --secret supersecret <span class="se">\</span>
+  --auth-host http://access-guard.localhost.com/ <span class="se">\</span>
+  --trusted-hosts access-guard access-guard.localhost.com <span class="se">\</span>
+  --cookie-domain localhost.com <span class="se">\</span>
+  --email-host mailhog <span class="se">\</span>
+  --email-port <span class="m">1025</span> <span class="se">\</span>
+  --from-email access-guard@local.com <span class="se">\</span>
+  --host <span class="m">0</span>.0.0.0 <span class="se">\</span>
+  --port <span class="m">8585</span> <span class="se">\</span>
+  --email-username email-login <span class="se">\</span>
+  --email-password SecreT <span class="se">\</span>
+  --email-use-tls <span class="se">\</span>
+  --email-no-validate-certs <span class="se">\</span>
+  --email-client-cert /run/secret/smtp-cert <span class="se">\</span>
+  --email-client-key /run/secret/smtp-key <span class="se">\</span>
+  --email-subject <span class="s2">&quot;You need to verify yourself&quot;</span> <span class="se">\</span>
+  --cookie-secure <span class="se">\</span>
+  --auth-cookie-name local-access-guard-forwarded <span class="se">\</span>
+  --verified-cookie-name local-access-guard-session <span class="se">\</span>
+  --auth-cookie-max-age <span class="m">3600</span> <span class="se">\</span>
+  --auth-signature-max-age <span class="m">600</span> <span class="se">\</span>
+  --verify-signature-max-age <span class="m">43200</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All available arguments aren't included above, since some of them are mutually
+exclusive. In addition to the ones seen above the following arguments also exists:</p>
+<ul>
+<li><a href="./#secret-file">--secret-file</a></li>
+<li><a href="./#smtp-client-password-file">--email-password-file</a></li>
+<li><a href="./#smtp-client-start-tls">--email-start-tls</a></li>
+</ul>
+</div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../traefik/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Use with traefik&#39;s forward auth" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Use with traefik's forward auth
+            </div>
+          </div>
+        </a>
+      
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        
+          Made with
+          <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+            Material for MkDocs
+          </a>
+        
+        
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://github.com/flaeppe/access-guard" target="_blank" rel="noopener" title="github.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.annotate", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "toc.integrate"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../assets/javascripts/workers/search.fcfe8b6d.min.js", "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.b1047164.min.js"></script>
+      
+    
+  </body>
+</html>
